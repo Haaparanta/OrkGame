@@ -1,9 +1,11 @@
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+import logging
+from mcp import ClientSession
 from pydantic import BaseModel
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
 import asyncio
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class Command(BaseModel):
@@ -47,15 +49,15 @@ class Chat:
 
     async def process_query(self, session: ClientSession, query: str):
         # Load mcp tools and create AI agent
-        print("mcp_tools")
+        logger.info("mcp_tools")
         tools = await load_mcp_tools(session)
-        print("agent")
+        logger.info("agent")
         agent = create_react_agent(
             model="openai:gpt-5-mini-2025-08-07", tools=tools, prompt=self.system_prompt
         )
-        print("invoke")
+        logger.info("invoke")
         res = await agent.ainvoke({"messages": query})
-        print("done")
+        logger.info("done")
         for key in res.keys():
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
