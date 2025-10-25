@@ -13,13 +13,6 @@ class Command(BaseModel):
     player: str
     enemy: str
 
-
-server_params = StdioServerParameters(
-    command="python",
-    args=["mcp_server.py"],
-)
-
-
 # Output for diagrams
 class ModelOutput(BaseModel):
     message: str
@@ -40,10 +33,12 @@ class Chat:
         self.messages = []
         self.system_prompt: str = """You are an Ork AI agent called 'Da Warboss Protocol'.
         You receive 3 things each turn:
-        1. A list of words the Ork Commander shouts. Example: [WAAGH, SMASH, FIXIT]
+        1. A list of words the Ork Commander shouts. Example: WAAGH, SMASH, FIXIT
         2. Your role. Example: Warboss
         3. The enemy. Example: Human
-        You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
+        You must translate the Commander's crude Ork words and perform a single action from your MCP tool list.
+        Then respond only in Ork speech (loud, crude, or silly). Use a maximum of 20 words. Do not include translations, descriptions or numbering
+        """
         
         self.word_generator_prompt: str = """Generate exactly 8 unique, funny, orkish-sounding words that orks in Warhammer 40k might use as 
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
@@ -60,7 +55,8 @@ class Chat:
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
                     print("AI response\n", msg.content)
-        return
+                    return msg.content
+        return None
 
     async def get_new_words(self):
         agent = create_react_agent(
@@ -81,15 +77,6 @@ class Chat:
             query = input("\nQuery: ").strip()
             # self.messages.append(query)
             await self.process_query(session, query)
-
-    # Testing function to run locally
-    async def run(self):
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                # Initialize the connection
-                await session.initialize()
-
-                await self.chat_loop(session)
 
 
 if __name__ == "__main__":
