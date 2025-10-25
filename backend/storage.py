@@ -5,6 +5,8 @@ from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
+from backend.action import Effect
+
 try:
     from .action import ActionEnum
 except ImportError:
@@ -23,6 +25,7 @@ class Actor(enum.StrEnum):
 class Action(BaseModel):
     name: ActionEnum
     actor: Actor
+    effect: Effect
 
 
 class GameSession(BaseModel):
@@ -58,6 +61,7 @@ class GameSession(BaseModel):
         self.enemycurrenthealth = (
             self.enemycurrenthealth + effect.enemy_heal - effect.enemy_damage
         )
+        self.actions.append(Action(name=action, actor=Actor.player, effect=effect))
 
 
 SessionStorage = TypeAdapter(dict[str, GameSession])
