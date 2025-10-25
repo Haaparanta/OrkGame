@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8080"  # Backend accessible at localhost:8000
+    volumes:
+      - ./state:/state
+    environment:
+      STATE_FOLDER: /state
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+        - action: rebuild
+          path: uv.lock
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"  # Frontend accessible at localhost:3000
+    develop:
+      watch:
+        - action: rebuild
+          path: ./ork-ork-ork
