@@ -14,7 +14,7 @@ export default function BattlePage() {
   const { playTurn, loadRewards, chooseReward, completeRun } = useGameActions()
 
   useEffect(() => {
-    if (!state && !isLoading) {
+    if (!state && !isLoading && process.env.NODE_ENV === "production") {
       router.replace("/")
     }
   }, [state, isLoading, router])
@@ -57,6 +57,68 @@ export default function BattlePage() {
   }
 
   if (!state) {
+    // In development mode, show mock data for UI testing
+    if (process.env.NODE_ENV === "development") {
+      const mockState = {
+        sessionId: "mock-session",
+        seed: 12345,
+        phase: "battle" as const,
+        wave: 1,
+        score: 150,
+        limits: {
+          maxWordsPerTurn: 3,
+          maxHand: 9,
+        },
+        player: {
+          id: "warboss",
+          name: "GROKK DA STOMPA",
+          hp: 85,
+          hpMax: 100,
+          rage: 3,
+          ammo: 8,
+          cover: false,
+          damageMod: 1.2,
+          armor: 2,
+          distance: "melee" as const,
+          words: ["WAAGH", "SMASH", "BOOM", "CHARGE", "DAKKA", "SHOOT", "BURN", "FIXIT", "COVER"],
+          traits: ["tough", "aggressive"],
+          flags: {},
+        },
+        enemy: {
+          id: "enemy",
+          name: "SKARFANG DA BRUTAL",
+          hp: 70,
+          hpMax: 80,
+          rage: 2,
+          ammo: 5,
+          cover: true,
+          damageMod: 1.0,
+          armor: 1,
+          distance: "close" as const,
+          words: ["KRUMP", "STOMP", "ROAR", "SLASH", "DODGE", "BLOCK", "RAGE", "HUNT", "STRIKE"],
+          traits: ["sneaky"],
+          flags: {},
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      return (
+        <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-12">
+          <OrkBattleUI
+            state={mockState}
+            lastTurn={undefined}
+            rewards={undefined}
+            error={undefined}
+            isLoading={false}
+            onSubmitTurn={handleSubmitTurn}
+            onPickReward={handlePickReward}
+            onEndRun={handleEndRun}
+          />
+        </main>
+      )
+    }
+
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
         <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
