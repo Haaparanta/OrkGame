@@ -45,7 +45,8 @@ class GameSession(BaseModel):
             enemymaxhealth=100,
         )
 
-    def act(self, action: ActionEnum):
+    def act(self, action: str):
+        action = ActionEnum(action)
         effect = action.effect()
         self.currenthealth = self.currenthealth + effect.self_heal - effect.self_damage
         self.armor = self.armor + effect.gain_armor - effect.loose_armor
