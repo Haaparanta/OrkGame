@@ -17,12 +17,6 @@ from .ipc import delete_socket, ipc_server
 from .mcp_client import Command, Chat
 
 
-server_params = StdioServerParameters(
-    command="python",
-    args=["backend/mcp_server.py"],
-)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.state = read_state()
@@ -57,15 +51,21 @@ async def new_words_fetch():
 
 @app.post("/command")
 async def command(
-    command: Command, request: Request, state: GameSession = Depends(get_session_state)
+    command: Command, request: Request, state: GameSession = Depends(get_session_state), 
 ):
     save_session_state(request, state)
     chad = Chat()
+    
+    server_params = StdioServerParameters(
+        command="python",
+        args=["backend/mcp_server.py", state.name],
+    )
+    
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             # Initialize the connection
             await session.initialize()
-            await chad.process_query(session=session, query=command.action1 + ', ' + command.action2 + ', ' + command.action3)
+            await chad.process_query(session=session, query='1. ' + command.action1 + ', ' + command.action2 + ', ' + command.action3 + ' 2. '+ command.player + ' 3. ' + command.enemy)
             save_session_state(request, state)
     return
 

@@ -13,13 +13,6 @@ class Command(BaseModel):
     player: str
     enemy: str
 
-
-server_params = StdioServerParameters(
-    command="python",
-    args=["mcp_server.py"],
-)
-
-
 # Output for diagrams
 class ModelOutput(BaseModel):
     message: str
@@ -40,7 +33,7 @@ class Chat:
         self.messages = []
         self.system_prompt: str = """You are an Ork AI agent called 'Da Warboss Protocol'.
         You receive 3 things each turn:
-        1. A list of words the Ork Commander shouts. Example: [WAAGH, SMASH, FIXIT]
+        1. A list of words the Ork Commander shouts. Example: WAAGH, SMASH, FIXIT
         2. Your role. Example: Warboss
         3. The enemy. Example: Human
         You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
@@ -81,15 +74,6 @@ class Chat:
             query = input("\nQuery: ").strip()
             # self.messages.append(query)
             await self.process_query(session, query)
-
-    # Testing function to run locally
-    async def run(self):
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                # Initialize the connection
-                await session.initialize()
-
-                await self.chat_loop(session)
 
 
 if __name__ == "__main__":
