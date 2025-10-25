@@ -39,55 +39,14 @@ class Chat:
         You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
 
     async def process_query(self, session: ClientSession, query: str):
-        self.messages.append({"type": "human", "content": query})
-
+        
         # Load mcp tools and create AI agent
         tools = await load_mcp_tools(session)
         agent = create_react_agent(
-            model="openai:o4-mini-2025-04-16", tools=tools, prompt=self.system_prompt
+            model="openai:gpt-5-mini-2025-08-07", tools=tools, prompt=self.system_prompt
         )
-        res = await agent.ainvoke({"messages": self.messages})
-
-        outputmsg = []
-
-        for key in res.keys():
-            for msg in res[key]:
-                if msg.type == "ai" and msg.content != "":
-                    print("AI response\n", msg.content)
-                    # Try to make a diagram, if fail then make text only output
-                    try:
-                        out = ModelOutput.model_validate_json(msg.content)
-
-                        out = Response.model_validate(
-                            {
-                                "index": 42,
-                                "title": out.title,
-                                "text": out.message,
-                                "chart": {
-                                    "chart_type": out.chart_type,
-                                    "series": out.values,
-                                },
-                                "prompt": query,
-                            }
-                        )
-                        outputmsg.append(out)
-                    except Exception:
-                        out = TextOutput.model_validate_json(msg.content)
-                        out = OnlyTextResponse.model_validate(
-                            {
-                                "index": 69,
-                                "title": out.title,
-                                "text": out.message,
-                                "prompt": query,
-                            }
-                        )
-                        outputmsg.append(out)
-                # Debug prints
-                # elif msg.type == "tool":
-                #    print("Used tool\n", msg.name)
-                elif msg.type == "human":
-                    print("Human prompt\n", msg.content)
-        return outputmsg
+        res = await agent.ainvoke({"messages": query})
+        return
 
     # Testing function to run locally
     async def chat_loop(self, session: ClientSession):
