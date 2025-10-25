@@ -4,6 +4,8 @@ from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
+from .action import ActionEnum
+
 STATE_FOLDER = os.environ.get("STATE_FOLDER", "./")
 
 
@@ -13,7 +15,7 @@ class Actor(enum.StrEnum):
 
 
 class Action(BaseModel):
-    name: str
+    name: ActionEnum
     actor: Actor
 
 
@@ -30,10 +32,24 @@ class GameSession(BaseModel):
 
     @classmethod
     def new_session(cls, name):
-        return cls(name=name, currenthealth=100, maxhealth=100, armor=0, rage=0, enemycurrenthealth=100, enemymaxhealth=100)
+        return cls(
+            name=name,
+            currenthealth=100,
+            maxhealth=100,
+            armor=0,
+            rage=0,
+            enemycurrenthealth=100,
+            enemymaxhealth=100,
+        )
 
-    def act(self, action):
-        print("Act:", action)
+    def act(self, action: ActionEnum):
+        effect = action.effect()
+        self.currenthealth = self.currenthealth + effect.self_heal - effect.self_damage
+        self.armor = self.armor + effect.gain_armor - effect.loose_armor
+        self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
+        self.enemycurrenthealth = (
+            self.enemycurrenthealth + effect.enemy_heal - effect.enemy_damage
+        )
 
 
 SessionStorage = TypeAdapter(dict[str, GameSession])

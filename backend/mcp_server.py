@@ -4,17 +4,19 @@ from mcp.types import Resource
 import sys
 
 from ipc import send_ipc_message
+from action import ActionEnum
 
 # Create an MCP server
 mcp = FastMCP("northwind")
 
 session_id = sys.argv[1]
 
+
 @mcp.tool()
 def shoot_rocket():
     """Shoots your armor shredding rocket"""
     logging.info(f"FIRING ROCKET")
-    send_ipc_message(session_id, "fire rocket")
+    send_ipc_message(session_id, ActionEnum.shoot_rocket)
     return
 
 
@@ -22,7 +24,7 @@ def shoot_rocket():
 def rage_up():
     """Shouts a powerful battlecry that gives you a damage amplifier and might fear enemies"""
     logging.info(f"Shouting Waag (rage_up)")
-    send_ipc_message(session_id, "waag")
+    send_ipc_message(session_id, ActionEnum.rage_up)
     return
 
 
@@ -30,7 +32,7 @@ def rage_up():
 def patch_up():
     """Heals your battlewounds"""
     logging.info(f"Healing now (patch_up)")
-    send_ipc_message(session_id, "heal")
+    send_ipc_message(session_id, ActionEnum.patch_up)
     return
 
 
@@ -38,7 +40,7 @@ def patch_up():
 def charge():
     """Charges in to hit the enemy with your axe"""
     logging.info(f"Hitting enemy with axe now (charge)")
-    send_ipc_message(session_id, "charge")
+    send_ipc_message(session_id, ActionEnum.charge)
     return
 
 
@@ -46,7 +48,7 @@ def charge():
 def throw_granade():
     """Throws your highly explosive granade"""
     logging.info(f"Throwing granade")
-    send_ipc_message(session_id, "grenade")
+    send_ipc_message(session_id, ActionEnum.throw_granade)
     return
 
 
@@ -54,7 +56,7 @@ def throw_granade():
 def fire_flamethrower():
     """Burn enemies with your flamethrower"""
     logging.info(f"Flamethrowing now")
-    send_ipc_message(session_id, "flame")
+    send_ipc_message(session_id, ActionEnum.fire_flamethrower)
     return
 
 
