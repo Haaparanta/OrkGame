@@ -1,0 +1,77 @@
+services:
+  traefik:
+    image: "traefik:v3.4"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`orkgamez.serverlul.win`)&&PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=myresolver"
+      - "traefik.http.routers.backend.middlewares=api-stripprefix"
+      - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
+    volumes:
+      - ./db:/code/db
+    # environment:
+    #   DB_HOST: dataset:5432
+    #   DB_USER: postgres
+    #   DB_PASSWORD: postgres
+    #   DB_DATABASE: northwind
+    #   OPENAI_API_KEY: ${OPENAI_API_KEY}
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+        - action: rebuild
+          path: uv.lock
+  ui:
+    image: nginx
+    # build:
+    #   context: frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontent.rule=Host(`orkgamez.serverlul.win`)&&!PathPrefix(`/api`)"
+      - "traefik.http.routers.frontent.entrypoints=websecure"
+      - "traefik.http.routers.frontent.tls.certresolver=myresolver"
+    # develop:
+    #   watch:
+    #     - action: rebuild
+    #       path: ./frontend
+    #       target: /work
+#   dataset:
+#     image: postgres:latest
+#     environment:
+#       POSTGRES_DB: northwind
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#     volumes:
+#       - postgresql_bin:/usr/lib/postgresql
+#       - postgresql_data:/var/lib/postgresql/data
+#       - ./northwind_psql/northwind.sql:/docker-entrypoint-initdb.d/northwind.sql
+#       - ./northwind_psql/files:/files
+#
+# volumes:
+#   postgresql_data:
+#     driver: local
+#   postgresql_bin:
+#     driver: local
+#

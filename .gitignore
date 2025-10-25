@@ -1,0 +1,6 @@
+__pycache__
+.venv
+letsencrypt
+
+ork-ork-ork/node_modules/
+ork-ork-ork/.next/
