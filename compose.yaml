@@ -40,7 +40,7 @@ services:
       watch:
         - action: sync
           path: ./backend
-          target: /code/backend
+          target: /app/backend
         - action: rebuild
           path: uv.lock
   ui:
