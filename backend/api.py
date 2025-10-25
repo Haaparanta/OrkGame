@@ -65,9 +65,9 @@ async def command(
         async with ClientSession(read, write) as session:
             # Initialize the connection
             await session.initialize()
-            await chad.process_query(session=session, query='1. ' + command.action1 + ', ' + command.action2 + ', ' + command.action3 + ' 2. '+ command.player + ' 3. ' + command.enemy)
+            response = await chad.process_query(session=session, query='1. ' + command.action1 + ', ' + command.action2 + ', ' + command.action3 + ' 2. '+ command.player + ' 3. ' + command.enemy)
             save_session_state(request, state)
-    return
+    return response
 
 
 @app.post("/attach-session")

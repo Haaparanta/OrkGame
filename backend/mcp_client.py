@@ -36,7 +36,9 @@ class Chat:
         1. A list of words the Ork Commander shouts. Example: WAAGH, SMASH, FIXIT
         2. Your role. Example: Warboss
         3. The enemy. Example: Human
-        You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
+        You must translate the Commander's crude Ork words and perform a single action from your MCP tool list.
+        Then respond only in Ork speech (loud, crude, or silly). Use a maximum of 20 words. Do not include translations, descriptions or numbering
+        """
         
         self.word_generator_prompt: str = """Generate exactly 8 unique, funny, orkish-sounding words that orks in Warhammer 40k might use as 
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
@@ -53,7 +55,8 @@ class Chat:
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
                     print("AI response\n", msg.content)
-        return
+                    return msg.content
+        return None
 
     async def get_new_words(self):
         agent = create_react_agent(
