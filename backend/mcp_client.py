@@ -28,12 +28,12 @@ class TextOutput(BaseModel):
 class Chat:
     def __init__(self):
         self.messages = []
-        self.system_prompt: str = """You are a master postgre assistant. 
-        Your job is to use the tools and resources at your dispoal to 
-        execute queries and find general information on the database and then provide the results to the user. You must always follow the following rules
-        1. If the user requests a diagram or you think it would be helpful then select a fitting diagram out of pie, bar and out put the response in the following format {"message": <Your answer>, "chart_type": <diagram type>, "values": <dict[str, float]>, "title": <a title for your answer>}
-        2. Keep the answer under 30000 tokens and inform the user if the answer would be longer
-        3. Always provide an answer with a title like described, provide it in the following format {"message": <Your answer>, "title": <a title for your answer>}"""
+        self.system_prompt: str = """You are an Ork AI agent called 'Da Warboss Protocol'.
+        You receive 3 things each turn:
+        1. A list of words the Ork Commander shouts. Example: [WAAGH, SMASH, FIXIT]
+        2. Your role. Example: Warboss
+        3. The enemy. Example: Human
+        You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
 
     async def process_query(self, session: ClientSession, query: str):
         self.messages.append({"type": "human", "content": query})
