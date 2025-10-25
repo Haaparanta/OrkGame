@@ -62,11 +62,13 @@ async def list_resources() -> typing.List[Resource]:
             f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_DATABASE}"
         ) as conn:
             with conn.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT table_name 
                     FROM information_schema.tables 
                     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-                """)
+                """
+                )
                 tables = cursor.fetchall()
                 return [
                     Resource(
