@@ -105,7 +105,7 @@ async def new_words_fetch():
     in the game's command system where players shout Ork battle cries.
 
     Returns:
-        str: A space-separated string of 8 unique Orkish battle words
+        str: A space-separated string of 9 unique Orkish battle words
 
     Example:
         "WAAGH KRUMP DAKKA CHOPPA BOYZ STOMPA SHOOTA BURNA"
