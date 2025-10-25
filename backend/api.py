@@ -48,17 +48,22 @@ def current_session_state(
     save_session_state(request, state)
     return state
 
+@app.get("/new-words-player")
+def new_words_fetch():
+    return Chat.get_new_words()
 
 @app.post("/command")
 async def command(
     command: Command, request: Request, state: GameSession = Depends(get_session_state)
 ):
+    save_session_state(request, state)
     chad = Chat()
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             # Initialize the connection
             await session.initialize()
-            await chad.process_query(session=session, query=command.action1)
+            await chad.process_query(session=session, query=command.action1 + ', ' + command.action2 + ', ' + command.action3)
+            save_session_state(request, state)
     return
 
 

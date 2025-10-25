@@ -10,6 +10,8 @@ class Command(BaseModel):
     action1: str
     action2: str
     action3: str
+    player: str
+    enemy: str
 
 
 server_params = StdioServerParameters(
@@ -42,7 +44,11 @@ class Chat:
         2. Your role. Example: Warboss
         3. The enemy. Example: Human
         You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
-
+        
+        self.word_generator_prompt: str = """Generate exactly 8 unique, funny, orkish-sounding words that orks in Warhammer 40k might use as 
+        commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
+        descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
+        
     async def process_query(self, session: ClientSession, query: str):
         # Load mcp tools and create AI agent
         tools = await load_mcp_tools(session)
@@ -56,6 +62,18 @@ class Chat:
                     print("AI response\n", msg.content)
         return
 
+    async def get_new_words(self):
+        agent = create_react_agent(
+            model="openai:gpt-5-mini-2025-08-07", tools=[], prompt="You are a helpful Warhammer 40k Ork linguist."
+        )
+        res = await agent.ainvoke({"messages": self.word_generator_prompt})    
+        for key in res.keys():
+            for msg in res[key]:
+                if msg.type == "ai" and msg.content != "":
+                    result = msg.content.split(" ")
+                    result.append("No")
+        return result
+    
     # Testing function to run locally
     async def chat_loop(self, session: ClientSession):
         while True:
