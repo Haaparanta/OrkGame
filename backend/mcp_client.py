@@ -13,6 +13,7 @@ class Command(BaseModel):
     player: str
     enemy: str
 
+
 # Output for diagrams
 class ModelOutput(BaseModel):
     message: str
@@ -39,18 +40,22 @@ class Chat:
         You must translate the Commander's crude Ork words and perform a single action from your MCP tool list.
         Then respond only in Ork speech (loud, crude, or silly). Use a maximum of 20 words. Do not include translations, descriptions or numbering
         """
-        
+
         self.word_generator_prompt: str = """Generate exactly 8 unique, funny, orkish-sounding words that orks in Warhammer 40k might use as 
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
         descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
-        
+
     async def process_query(self, session: ClientSession, query: str):
         # Load mcp tools and create AI agent
+        print("mcp_tools")
         tools = await load_mcp_tools(session)
+        print("agent")
         agent = create_react_agent(
             model="openai:gpt-5-mini-2025-08-07", tools=tools, prompt=self.system_prompt
         )
+        print("invoke")
         res = await agent.ainvoke({"messages": query})
+        print("done")
         for key in res.keys():
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
@@ -60,9 +65,11 @@ class Chat:
 
     async def get_new_words(self):
         agent = create_react_agent(
-            model="openai:gpt-5-mini-2025-08-07", tools=[], prompt="You are a helpful Warhammer 40k Ork linguist."
+            model="openai:gpt-5-mini-2025-08-07",
+            tools=[],
+            prompt="You are a helpful Warhammer 40k Ork linguist.",
         )
-        res = await agent.ainvoke({"messages": self.word_generator_prompt})    
+        res = await agent.ainvoke({"messages": self.word_generator_prompt})
         for key in res.keys():
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
@@ -70,7 +77,7 @@ class Chat:
                     sub_result.append("NO")
                     return sub_result
         return None
-    
+
     # Testing function to run locally
     async def chat_loop(self, session: ClientSession):
         while True:
