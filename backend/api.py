@@ -65,43 +65,51 @@ app.middleware("http")(storage_middleware)
 
 
 @app.get("/current-session")
-def current_session(session_id: str = Depends(get_game_session)):
+def current_session(request: Request):
     """
     Get the current game session identifier.
 
     Returns the session ID from the 'game-session' cookie. This endpoint
     is used to verify which session the client is currently bound to.
+    If no session exists, returns None.
 
     Args:
-        session_id (str): The session ID extracted from the cookie dependency
+        request (Request): The HTTP request object
 
     Returns:
-        str: The current session identifier
-
-    Raises:
-        HTTPException: 401 if no valid session cookie is present
+        str | None: The current session identifier or None if no session exists
     """
-    return session_id
+    game_session = request.cookies.get("game-session")
+    return game_session
 
 
 @app.get("/session-state")
 def current_session_state(
-    request: Request, state: GameSession = Depends(get_session_state)
+    request: Request
 ) -> GameSession:
     """
     Get the current game session state.
 
     Retrieves the complete game state for the current session, including
     player health, armor, rage, enemy status, and action history. If no
-    state exists for the session, creates a new session with default values.
+    session exists, creates a new temporary session with default values.
 
     Args:
         request (Request): The HTTP request object
-        state (GameSession): The current game session state from dependency injection
 
     Returns:
         GameSession: Complete game state including player stats, enemy stats, and actions
     """
+    game_session = request.cookies.get("game-session")
+    
+    if game_session is None:
+        # Return a temporary session with default values
+        return GameSession.new_session("temp_session")
+    
+    state = request.app.state.state.get(game_session)
+    if state is None:
+        state = GameSession.new_session(game_session)
+    
     save_session_state(request, state)
     return state
 
