@@ -70,9 +70,10 @@ class Chat:
         for key in res.keys():
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
-                    result = msg.content.split(" ")
-                    result.append("No")
-        return result
+                    sub_result = msg.content.split(" ")
+                    sub_result.append("No")
+                    return sub_result
+        return None
     
     # Testing function to run locally
     async def chat_loop(self, session: ClientSession):

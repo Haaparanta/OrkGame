@@ -51,9 +51,9 @@ def current_session_state(
     return state
 
 @app.get("/new-words-player")
-def new_words_fetch():
+async def new_words_fetch():
     chad = Chat()
-    return chad.get_new_words()
+    return await chad.get_new_words()
 
 @app.post("/command")
 async def command(
