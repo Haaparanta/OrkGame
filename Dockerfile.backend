@@ -32,7 +32,6 @@ ADD backend /app/backend
 
 EXPOSE 8080
 
-CMD ["/app/.venv/bin/python", "-m", "backend"]
-CMD [".venv/bin/uvicorn", "--host", "0.0.0.0", "--port", "8080", "--access-log", "--root-path", "/api", "--reload", "backend.api:app"]
+CMD ["bash", "-c", "source .venv/bin/activate && uvicorn --host 0.0.0.0 --port 8080 --access-log --root-path /api --reload backend.api:app"]
 
 
