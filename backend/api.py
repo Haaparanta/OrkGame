@@ -22,8 +22,3 @@ def get_game_session(
 @app.get("/")
 def hello(session_id: str = Depends(get_game_session)):
     return session_id
-
-
-@app.post("/attach-session")
-def attach_session(response: Response, session_name: str):
-    response.set_cookie(key="game-session", value=session_name)
