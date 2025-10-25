@@ -10,6 +10,7 @@ utilizing MCP (Model Context Protocol) for AI-driven battle interactions.
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from mcp.client.stdio import stdio_client
 from mcp import ClientSession, StdioServerParameters
 
@@ -50,6 +51,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "https://orkgamez.serverlul.win"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.middleware("http")(storage_middleware)
 
 

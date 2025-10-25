@@ -12,12 +12,17 @@ import {
 } from "react"
 
 import {
-  endGame as apiEndGame,
-  fetchGameState,
-  fetchRewards as apiFetchRewards,
+  getCurrentSession,
+  getSessionState,
+  getNewWordsPlayer,
+  submitCommand,
+  attachSession,
   startGame as apiStartGame,
+  fetchGameState,
   submitTurn as apiSubmitTurn,
+  fetchRewards as apiFetchRewards,
   pickReward as apiPickReward,
+  endGame as apiEndGame,
   ApiError,
 } from "./api"
 import type {

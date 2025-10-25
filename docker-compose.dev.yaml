@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   backend:
@@ -23,8 +23,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_BASE: "https://orkgamez.serverlul.win/api"
     ports:
       - "3000:3000"  # Frontend accessible at localhost:3000
+    environment:
+      NEXT_PUBLIC_API_BASE: "https://orkgamez.serverlul.win/api"
     develop:
       watch:
         - action: rebuild
