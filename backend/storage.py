@@ -1,4 +1,5 @@
 import enum
+import logging
 import os
 from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -8,6 +9,8 @@ try:
     from .action import ActionEnum
 except ImportError:
     from action import ActionEnum
+
+logger = logging.getLogger("uvicorn.error")
 
 STATE_FOLDER = os.environ.get("STATE_FOLDER", "./")
 
@@ -48,6 +51,7 @@ class GameSession(BaseModel):
     def act(self, action: str):
         action = ActionEnum(action)
         effect = action.effect()
+        logger.info("Got effect: %s", effect)
         self.currenthealth = self.currenthealth + effect.self_heal - effect.self_damage
         self.armor = self.armor + effect.gain_armor - effect.loose_armor
         self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
