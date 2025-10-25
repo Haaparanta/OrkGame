@@ -9,6 +9,8 @@ from .storage import (
     get_session_state,
 )
 
+from .mcp_client import Command
+
 app = FastAPI(lifespan=lifespan)
 app.middleware("http")(storage_middleware)
 
@@ -24,6 +26,13 @@ def current_session_state(
 ):
     save_session_state(request, state)
     return state
+
+
+@app.post("/command")
+def command(
+    command: Command, request: Request, state: GameSession = Depends(get_session_state)
+):
+    pass
 
 
 @app.post("/attach-session")

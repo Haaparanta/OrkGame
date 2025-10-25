@@ -5,7 +5,12 @@ from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
 import asyncio
 
-from .data_format import Response, OnlyTextResponse
+
+class Command(BaseModel):
+    action1: str
+    action2: str
+    action3: str
+
 
 server_params = StdioServerParameters(
     command="python",
@@ -39,7 +44,6 @@ class Chat:
         You must translate the Commander's crude Ork words and perform a single action from your MCP tool list"""
 
     async def process_query(self, session: ClientSession, query: str):
-        
         # Load mcp tools and create AI agent
         tools = await load_mcp_tools(session)
         agent = create_react_agent(
