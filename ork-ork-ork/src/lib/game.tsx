@@ -229,7 +229,9 @@ export function useGameActions() {
   const playTurn = useCallback(
     (sessionId: string, payload: TurnRequest) =>
       runWithLoading(async () => {
+        console.log('playTurn called', { sessionId, payload })
         const resolution = await apiSubmitTurn(sessionId, payload)
+        console.log('playTurn resolution received', resolution)
         dispatch({ type: "set_last_turn", payload: resolution })
         dispatch({ type: "set_state", payload: resolution.stateAfter })
         return resolution

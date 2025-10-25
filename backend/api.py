@@ -9,10 +9,11 @@ utilizing MCP (Model Context Protocol) for AI-driven battle interactions.
 
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mcp.client.stdio import stdio_client
 from mcp import ClientSession, StdioServerParameters
+from pydantic import BaseModel
 
 from .storage import (
     GameSession,
@@ -25,6 +26,9 @@ from .storage import (
 from .ipc import delete_socket, ipc_server
 
 from .mcp_client import Command, Chat
+
+class AttachSessionRequest(BaseModel):
+    session_name: str
 
 
 @asynccontextmanager
@@ -137,7 +141,6 @@ async def new_words_fetch():
 async def command(
     command: Command,
     request: Request,
-    state: GameSession = Depends(get_session_state),
 ):
     """
     Process a battle command from the player.
@@ -154,7 +157,6 @@ async def command(
     Args:
         command (Command): Battle command containing action1, action2, action3, player, and enemy
         request (Request): The HTTP request object
-        state (GameSession): Current game session state from dependency injection
 
     Returns:
         str: AI response in Ork speech describing the battle action taken
@@ -164,6 +166,17 @@ async def command(
                       player="Warboss", enemy="Human")
         Output: "WAAGH! ME KRUMPS DA HUMIE WIF BIG DAKKA! BOOM!"
     """
+    # Get or create session state
+    game_session = request.cookies.get("game-session")
+    
+    if game_session is None:
+        # Create a temporary session for this command
+        game_session = "temp_session"
+    
+    state = request.app.state.state.get(game_session)
+    if state is None:
+        state = GameSession.new_session(game_session)
+    
     save_session_state(request, state)
     chad = Chat()
 
@@ -193,7 +206,7 @@ async def command(
 
 
 @app.post("/attach-session")
-def attach_session(response: Response, session_name: str):
+def attach_session(response: Response, request_data: AttachSessionRequest):
     """
     Attach a client to a specific game session.
 
@@ -204,13 +217,27 @@ def attach_session(response: Response, session_name: str):
 
     Args:
         response (Response): The HTTP response object to set the cookie on
-        session_name (str): The name/identifier for the game session
+        request_data (AttachSessionRequest): The request data containing session_name
 
     Returns:
-        None: The response cookie is set as a side effect
+        dict: Success message
 
     Note:
         The cookie is used by the get_game_session dependency to automatically
         inject the session ID into other endpoints.
     """
-    response.set_cookie(key="game-session", value=session_name)
+    session_name = request_data.session_name
+    
+    if not session_name:
+        raise HTTPException(status_code=400, detail="session_name is required")
+    
+    response.set_cookie(
+        key="game-session", 
+        value=session_name,
+        httponly=False,  # Allow JS access for debugging
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=86400  # 24 hours
+    )
+    
+    return {"message": "Session attached successfully", "session_name": session_name}

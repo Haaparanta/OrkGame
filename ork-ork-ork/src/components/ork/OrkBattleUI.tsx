@@ -134,13 +134,24 @@ export function OrkBattleUI({
 
   const handleSubmitTurn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedWords.length || isSubmittingTurn) return
+    console.log('handleSubmitTurn called', { selectedWords, isSubmittingTurn, hasWords })
+    
+    if (!selectedWords.length || isSubmittingTurn) {
+      console.log('Early return from handleSubmitTurn', { 
+        selectedWordsLength: selectedWords.length, 
+        isSubmittingTurn 
+      })
+      return
+    }
 
     try {
+      console.log('Starting turn submission', { selectedWords, allowEnemySpeak })
       setIsSubmittingTurn(true)
       await onSubmitTurn(selectedWords, allowEnemySpeak)
       setSelectedWordIds([]) // Clear selection after turn
-    } catch {
+      console.log('Turn submission completed successfully')
+    } catch (error) {
+      console.error('Turn submission failed:', error)
       // errors surface via the shared store; keep UI responsive
     } finally {
       setIsSubmittingTurn(false)

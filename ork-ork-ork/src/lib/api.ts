@@ -200,7 +200,7 @@ async function apiFetch<T>({
   signal,
   headers,
   cache = "no-store",
-  credentials,
+  credentials = "include", // Default to include credentials
 }: FetchOptions): Promise<T> {
   const url = buildUrl(path, query)
   const init: RequestInit = {
@@ -228,7 +228,8 @@ async function apiFetch<T>({
     method,
     body,
     query,
-    headers: init.headers
+    headers: init.headers,
+    credentials: init.credentials
   }
 
   let response: Response
@@ -283,7 +284,6 @@ export async function getCurrentSession(signal?: AbortSignal): Promise<string> {
     const result = await apiFetch<string>({
       path: "/current-session",
       signal,
-      credentials: "include",
     })
     ApiLogger.log("getCurrentSession", "GET", { signal: !!signal }, result)
     return result
@@ -299,7 +299,6 @@ export async function getSessionState(signal?: AbortSignal): Promise<GameSession
     const result = await apiFetch<GameSession>({
       path: "/session-state", 
       signal,
-      credentials: "include",
     })
     ApiLogger.log("getSessionState", "GET", { signal: !!signal }, result)
     return result
@@ -315,7 +314,6 @@ export async function getNewWordsPlayer(signal?: AbortSignal): Promise<string> {
     const result = await apiFetch<string>({
       path: "/new-words-player",
       signal,
-      credentials: "include",
     })
     ApiLogger.log("getNewWordsPlayer", "GET", { signal: !!signal }, result)
     return result
@@ -336,7 +334,6 @@ export async function submitCommand(
       method: "POST",
       body: command,
       signal,
-      credentials: "include",
     })
     ApiLogger.log("submitCommand", "POST", { command, signal: !!signal }, result)
     return result
@@ -355,9 +352,8 @@ export async function attachSession(
     const result = await apiFetch<void>({
       path: "/attach-session",
       method: "POST",
-      query: { session_name: sessionName },
+      body: { session_name: sessionName },
       signal,
-      credentials: "include",
     })
     ApiLogger.log("attachSession", "POST", { sessionName, signal: !!signal }, result)
     return result
