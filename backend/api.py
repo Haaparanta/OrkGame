@@ -38,13 +38,15 @@ app.middleware("http")(storage_middleware)
 
 @app.get("/current-session")
 def current_session(session_id: str = Depends(get_game_session)):
+    """Returns current session name"""
     return session_id
 
 
 @app.get("/session-state")
 def current_session_state(
     request: Request, state: GameSession = Depends(get_session_state)
-):
+) -> GameSession:
+    """Get current game state"""
     save_session_state(request, state)
     return state
 
@@ -64,4 +66,8 @@ async def command(
 
 @app.post("/attach-session")
 def attach_session(response: Response, session_name: str):
+    """Returns a cookie for session.
+
+    Use this to bind to session and get use it's state in future requests.
+    """
     response.set_cookie(key="game-session", value=session_name)
