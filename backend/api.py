@@ -19,8 +19,8 @@ def get_game_session(
     return game_session
 
 
-@app.get("/")
-def hello(session_id: str = Depends(get_game_session)):
+@app.get("/current-session")
+def current_session(session_id: str = Depends(get_game_session)):
     return session_id
 
 
