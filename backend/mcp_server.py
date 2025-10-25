@@ -8,7 +8,7 @@ from ipc import send_ipc_message
 # Create an MCP server
 mcp = FastMCP("northwind")
 
-session_id = sys.arv[1]
+session_id = sys.argv[1]
 
 @mcp.tool()
 def shoot_rocket():
