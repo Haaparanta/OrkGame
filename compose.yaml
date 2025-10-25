@@ -41,34 +41,16 @@ services:
         - action: rebuild
           path: uv.lock
   ui:
-    image: nginx
-    # build:
-    #   context: frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontent.rule=Host(`orkgamez.serverlul.win`)&&!PathPrefix(`/api`)"
       - "traefik.http.routers.frontent.entrypoints=websecure"
       - "traefik.http.routers.frontent.tls.certresolver=myresolver"
-    # develop:
-    #   watch:
-    #     - action: rebuild
-    #       path: ./frontend
-    #       target: /work
-#   dataset:
-#     image: postgres:latest
-#     environment:
-#       POSTGRES_DB: northwind
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: postgres
-#     volumes:
-#       - postgresql_bin:/usr/lib/postgresql
-#       - postgresql_data:/var/lib/postgresql/data
-#       - ./northwind_psql/northwind.sql:/docker-entrypoint-initdb.d/northwind.sql
-#       - ./northwind_psql/files:/files
-#
-# volumes:
-#   postgresql_data:
-#     driver: local
-#   postgresql_bin:
-#     driver: local
-#
+    develop:
+      watch:
+        - action: rebuild
+          path: ./ork-ork-ork
+
