@@ -158,7 +158,7 @@ export function OrkBattleUI({
 
   const phaseLabel = phase.toUpperCase()
 
-  const mainCards: JSX.Element[] = []
+  const mainCards: React.JSX.Element[] = []
 
   if (phase === "battle") {
     mainCards.push(
