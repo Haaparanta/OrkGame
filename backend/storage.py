@@ -19,14 +19,18 @@ class Action(BaseModel):
 
 class GameSession(BaseModel):
     name: str
-    health: int
+    currenthealth: int
+    maxhealth: int
     armor: int
+    rage: int
+    enemycurrenthealth: int
+    enemymaxhealth: int
 
     actions: list[Action] = Field(default_factory=list)
 
     @classmethod
     def new_session(cls, name):
-        return cls(name=name, health=100, armor=0)
+        return cls(name=name, currenthealth=100, maxhealth=100, armor=0, rage=0, enemycurrenthealth=100, enemymaxhealth=100)
 
     def act(self, action):
         print("Act:", action)
