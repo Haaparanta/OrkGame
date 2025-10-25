@@ -5,12 +5,11 @@ from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
-from backend.action import Effect
 
 try:
-    from .action import ActionEnum
+    from .action import ActionEnum, Effect
 except ImportError:
-    from action import ActionEnum
+    from action import ActionEnum, Effect
 
 logger = logging.getLogger("uvicorn.error")
 
