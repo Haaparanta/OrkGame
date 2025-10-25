@@ -71,7 +71,7 @@ class Chat:
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
                     sub_result = msg.content.split(" ")
-                    sub_result.append("No")
+                    sub_result.append("NO")
                     return sub_result
         return None
     
