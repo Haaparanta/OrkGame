@@ -29,12 +29,9 @@ services:
       - "traefik.http.routers.backend.middlewares=api-stripprefix"
       - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
     volumes:
-      - ./db:/code/db
-    # environment:
-    #   DB_HOST: dataset:5432
-    #   DB_USER: postgres
-    #   DB_PASSWORD: postgres
-    #   DB_DATABASE: northwind
+      - ./state:/state
+    environment:
+      STATE_FOLDER: /state
     #   OPENAI_API_KEY: ${OPENAI_API_KEY}
     develop:
       watch:

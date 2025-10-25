@@ -1,27 +1,29 @@
-from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, Request, Response
 
+from .storage import (
+    GameSession,
+    lifespan,
+    save_session_state,
+    storage_middleware,
+    get_game_session,
+    get_session_state,
+)
 
-app = FastAPI()
-
-
-def get_game_session(
-    game_session: str | None = Cookie(default=None, alias="game-session"),
-):
-    """Dependency that retrieves the 'game-session' cookie value.
-
-    Raises 401 if missing.
-    """
-    if game_session is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing 'game-session' cookie",
-        )
-    return game_session
+app = FastAPI(lifespan=lifespan)
+app.middleware("http")(storage_middleware)
 
 
 @app.get("/current-session")
 def current_session(session_id: str = Depends(get_game_session)):
     return session_id
+
+
+@app.get("/session-state")
+def current_session_state(
+    request: Request, state: GameSession = Depends(get_session_state)
+):
+    save_session_state(request, state)
+    return state
 
 
 @app.post("/attach-session")
