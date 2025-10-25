@@ -36,7 +36,7 @@ def throw_granade():
     return
 
 @mcp.tool()
-def shoot_rocket():
+def fire_flamethrower():
     """Burn enemies with your flamethrower"""
     logging.info(f"Flamethrowing now")
     return

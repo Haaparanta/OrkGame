@@ -50,6 +50,10 @@ class Chat:
             model="openai:gpt-5-mini-2025-08-07", tools=tools, prompt=self.system_prompt
         )
         res = await agent.ainvoke({"messages": query})
+        for key in res.keys():
+            for msg in res[key]:
+                if msg.type == "ai" and msg.content != "":
+                    print("AI response\n", msg.content)
         return
 
     # Testing function to run locally
