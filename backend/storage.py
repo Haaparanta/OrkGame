@@ -4,7 +4,7 @@ from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
-from .action import ActionEnum
+from action import ActionEnum
 
 STATE_FOLDER = os.environ.get("STATE_FOLDER", "./")
 
