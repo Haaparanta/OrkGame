@@ -1,25 +1,40 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request, Response
 from mcp.client.stdio import stdio_client
 from mcp import ClientSession, StdioServerParameters
 
 from .storage import (
     GameSession,
-    lifespan,
     save_session_state,
     storage_middleware,
     get_game_session,
     get_session_state,
+    read_state,
 )
+from .ipc import delete_socket, ipc_server
+
+from .mcp_client import Command, Chat
+
 
 server_params = StdioServerParameters(
     command="python",
     args=["backend/mcp_server.py"],
 )
 
-from .mcp_client import Command, Chat
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.state = read_state()
+    ipc = asyncio.create_task(ipc_server(app.state.state))
+    yield
+    ipc.cancel()
+    delete_socket()
+
 
 app = FastAPI(lifespan=lifespan)
 app.middleware("http")(storage_middleware)
+
 
 @app.get("/current-session")
 def current_session(session_id: str = Depends(get_game_session)):
@@ -45,6 +60,7 @@ async def command(
             await session.initialize()
             await chad.process_query(session=session, query=command.action1)
     return
+
 
 @app.post("/attach-session")
 def attach_session(response: Response, session_name: str):

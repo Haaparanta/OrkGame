@@ -1,10 +1,20 @@
-from contextlib import asynccontextmanager
+import enum
 import os
-from fastapi import Cookie, FastAPI, HTTPException, Request, status
-from pydantic import BaseModel
+from fastapi import Cookie, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
 STATE_FOLDER = os.environ.get("STATE_FOLDER", "./")
+
+
+class Actor(enum.StrEnum):
+    player = "player"
+    enemy = "enemy"
+
+
+class Action(BaseModel):
+    name: str
+    actor: Actor
 
 
 class GameSession(BaseModel):
@@ -12,9 +22,14 @@ class GameSession(BaseModel):
     health: int
     armor: int
 
+    actions: list[Action] = Field(default_factory=list)
+
     @classmethod
     def new_session(cls, name):
         return cls(name=name, health=100, armor=0)
+
+    def act(self, action):
+        print("Act:", action)
 
 
 SessionStorage = TypeAdapter(dict[str, GameSession])
@@ -48,12 +63,6 @@ def get_session_state(
 
 def save_session_state(request: Request, session: GameSession):
     request.app.state.state[session.name] = session
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.state = read_state()
-    yield
 
 
 async def storage_middleware(request: Request, call_next):
