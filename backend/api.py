@@ -122,7 +122,7 @@ def current_session_state(request: Request) -> GameSession:
 
 
 @app.get("/new-words-player")
-async def new_words_fetch():
+async def new_words_fetch(chat: Chat = Depends(get_chat)):
     """
     Generate new Orkish battle words for the player.
 
@@ -136,8 +136,7 @@ async def new_words_fetch():
     Example:
         "WAAGH KRUMP DAKKA CHOPPA BOYZ STOMPA SHOOTA BURNA"
     """
-    chad = Chat()
-    return await chad.get_new_words()
+    return await chat.get_new_words()
 
 
 @app.post("/command")
