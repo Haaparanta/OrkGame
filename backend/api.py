@@ -228,7 +228,7 @@ async def command(command: Command, request: Request, chat: Chat = Depends(get_c
         + state.current_enemy.role,
     )
     enemy_voice_line = await state.current_enemy.next_action(chat)
-    response = await chat.process_query(
+    enemy_response = await chat.process_query(
         game_session,
         False,
         query="1. "
@@ -242,7 +242,7 @@ async def command(command: Command, request: Request, chat: Chat = Depends(get_c
         + " 3. "
         + command.player,
     )
-    return response
+    return response, enemy_response
 
 
 @app.post("/attach-session")
@@ -335,20 +335,22 @@ def select_archetype(
 
     game_session = request.cookies.get("game-session")
     if game_session is None:
-        raise HTTPException(status_code=400, detail="No active session. Attach a session first.")
+        raise HTTPException(
+            status_code=400, detail="No active session. Attach a session first."
+        )
 
     # Get or create the session state
     state = request.app.state.state.get(game_session)
     if state is None:
         state = GameSession.new_session(game_session)
-    
+
     # Store the archetype in the session state
     state.archetype_id = archetype_id
     save_session_state(request, state)
 
     # Get the archetype details
     archetype = next((arch for arch in ARCHETYPES if arch["id"] == archetype_id), None)
-    
+
     if archetype:
         hpMax = int(archetype["baseStats"]["hpMax"])
         armor = int(archetype["baseStats"]["armor"])
