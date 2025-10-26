@@ -53,7 +53,7 @@ class Chat:
         tools = await load_mcp_tools(session)
         logger.info("agent")
         agent = create_react_agent(
-            model="openai:gpt-5-mini-2025-08-07", tools=tools, prompt=self.system_prompt
+            model="openai:gpt-5-nano-2025-08-07", tools=tools, prompt=self.system_prompt
         )
         logger.info("invoke")
         res = await agent.ainvoke({"messages": query})
@@ -67,7 +67,7 @@ class Chat:
 
     async def get_new_words(self):
         agent = create_react_agent(
-            model="openai:gpt-5-mini-2025-08-07",
+            model="openai:gpt-5-nano-2025-08-07",
             tools=[],
             prompt="You are a helpful Warhammer 40k Ork linguist.",
         )
