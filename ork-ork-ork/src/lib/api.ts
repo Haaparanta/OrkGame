@@ -93,6 +93,7 @@ interface AdaptStateOptions {
 interface ResolutionOptions {
   sessionId: string
   responseText: string
+  enemyResponseText: string
   usedWords: string[]
   previousBackend: BackendGameSession
   updatedBackend: BackendGameSession
@@ -100,89 +101,7 @@ interface ResolutionOptions {
   enemyWords: string[]
 }
 
-class ApiLogger {
-  private static logToConsole = true
-  private static logToStorage = true
-  private static maxStoredLogs = 100
 
-  static log(
-    endpoint: string,
-    method: string,
-    params: unknown,
-    result: unknown,
-    error?: unknown,
-  ) {
-    const timestamp = new Date().toISOString()
-    const logEntry = {
-      timestamp,
-      endpoint,
-      method,
-      params: this.sanitize(params),
-      result: this.sanitize(result),
-      error: error ? this.sanitize(error) : null,
-      success: !error,
-    }
-
-    if (this.logToConsole) {
-      if (error) {
-        console.error(`[API ERROR] ${method} ${endpoint}`, logEntry)
-      } else {
-        console.log(`[API] ${method} ${endpoint}`, logEntry)
-      }
-    }
-
-    if (this.logToStorage) {
-      this.store(logEntry)
-    }
-  }
-
-  private static sanitize(value: unknown) {
-    if (value === undefined) return undefined
-    if (value === null) return null
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-      return value
-    try {
-      return JSON.parse(JSON.stringify(value))
-    } catch {
-      return String(value)
-    }
-  }
-
-  private static store(entry: Record<string, unknown>) {
-    if (typeof window === "undefined") return
-    try {
-      const existing = window.localStorage.getItem("orkgame_api_logs")
-      const logs = existing ? (JSON.parse(existing) as Record<string, unknown>[]) : []
-      logs.push(entry)
-      const excess = Math.max(0, logs.length - this.maxStoredLogs)
-      if (excess > 0) {
-        logs.splice(0, excess)
-      }
-      window.localStorage.setItem("orkgame_api_logs", JSON.stringify(logs))
-    } catch {
-      // ignore localStorage failures
-    }
-  }
-
-  static getLogs() {
-    if (typeof window === "undefined") return []
-    try {
-      const stored = window.localStorage.getItem("orkgame_api_logs")
-      return stored ? (JSON.parse(stored) as Record<string, unknown>[]) : []
-    } catch {
-      return []
-    }
-  }
-
-  static clearLogs() {
-    if (typeof window === "undefined") return
-    try {
-      window.localStorage.removeItem("orkgame_api_logs")
-    } catch {
-      // ignore
-    }
-  }
-}
 
 export class ApiError extends Error {
   status: number
@@ -263,15 +182,24 @@ async function apiFetch<T>({
     credentials: init.credentials,
   }
 
+  // Add timeout for /command endpoint (60 seconds) since it depends on external AI services
+  const timeoutMs = path === "/command" ? 60000 : 30000
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new ApiError("Request timeout", 408, "TIMEOUT"))
+    }, timeoutMs)
+  })
+
   let response: Response
   try {
-    response = await fetch(url, init)
+    response = await Promise.race([fetch(url, init), timeoutPromise])
   } catch (error) {
-    const apiError = new ApiError(
-      error instanceof Error ? error.message : "Network request failed",
-      0,
-    )
-    ApiLogger.log(path, method, requestSummary, null, apiError)
+    const apiError = error instanceof ApiError 
+      ? error 
+      : new ApiError(
+          error instanceof Error ? error.message : "Network request failed",
+          0,
+        )
     throw apiError
   }
 
@@ -290,7 +218,6 @@ async function apiFetch<T>({
     const code = (parsed as { error?: string })?.error
 
     const apiError = new ApiError(message, response.status, code, parsed)
-    ApiLogger.log(path, method, requestSummary, null, apiError)
     throw apiError
   }
 
@@ -298,7 +225,6 @@ async function apiFetch<T>({
   const shouldParseJson = contentLength !== "0" && response.status !== 204
 
   const result = shouldParseJson ? ((await response.json()) as T) : (undefined as T)
-  ApiLogger.log(path, method, requestSummary, result)
   return result
 }
 
@@ -467,6 +393,24 @@ function actionsToWords(actions: BackendAction[]) {
   return actions.map((action) => action.name.replace(/_/g, " ").toUpperCase())
 }
 
+function deriveEnemyWordsFromResponse(responseText: string): string[] {
+  if (!responseText) return []
+  
+  // Extract potential action words from the response
+  // Common patterns: "KRUMP", "DAKKA", "WAAGH", etc.
+  // Match uppercase words that are 3-20 characters long
+  const matches = responseText.match(/\b[A-Z][A-Z0-9_]*\b/g) || []
+  
+  // Filter to likely action words (typically verbs or nouns in all caps)
+  const actionWords = matches.filter(word => {
+    // Exclude common words and keep likely action names
+    const excluded = ["ME", "DA", "DE", "THE", "IS", "ARE", "AND", "OR", "IF", "BY", "TO", "WITH", "FOR"]
+    return !excluded.includes(word) && word.length >= 3
+  })
+  
+  return dedupeWords(actionWords).slice(0, 3)
+}
+
 function buildPlan(actions: BackendAction[], fallbackText: string): Plan {
   const steps = actions.map(actionToPlanStep)
   const speaks = steps.map((step) => step.log).filter(Boolean)
@@ -503,6 +447,15 @@ function adaptBackendSession({
     archetypeId ?? previousState?.player.id ?? (playerName ? "warboss" : "warboss")
   const safePlayerWords = ensureWords(playerWords, previousState?.player.words)
   const safeEnemyWords = ensureWords(enemyWords, previousState?.enemy.words)
+
+  // Debug logging for enemy words
+  if (enemyWords && enemyWords.length > 0) {
+    console.log("[adaptBackendSession] Enemy words processing:", {
+      inputEnemyWords: enemyWords,
+      safeEnemyWords,
+      fallbackEnemyWords: previousState?.enemy.words,
+    })
+  }
 
   const phase = derivePhase(backend)
   const score = deriveScore(backend)
@@ -554,6 +507,7 @@ function adaptBackendSession({
 
 function buildTurnResolution({
   responseText,
+  enemyResponseText,
   usedWords,
   previousBackend,
   updatedBackend,
@@ -566,7 +520,7 @@ function buildTurnResolution({
   const enemyActions = newActions.filter((action) => action.actor === "enemy")
 
   const playerPlan = buildPlan(playerActions, responseText)
-  const enemyPlan = buildPlan(enemyActions, enemyActions.map(describeEffect).join(" "))
+  const enemyPlan = buildPlan(enemyActions, enemyResponseText)
 
   const logEntries = [
     responseText,
@@ -622,21 +576,12 @@ async function safeGetNewWords(signal?: AbortSignal): Promise<string[]> {
     const words = await getNewWordsPlayer(signal)
     return ensureWords(normalizeWords(words))
   } catch (error) {
-    ApiLogger.log("getNewWordsPlayer", "GET", { signal: Boolean(signal) }, null, error)
     return []
   }
 }
 
 export function getApiBaseUrl() {
   return API_BASE_URL
-}
-
-export function getApiLogs() {
-  return ApiLogger.getLogs()
-}
-
-export function clearApiLogs() {
-  ApiLogger.clearLogs()
 }
 
 export async function getCurrentSession(signal?: AbortSignal): Promise<string | null> {
@@ -660,13 +605,36 @@ export async function getNewWordsPlayer(signal?: AbortSignal): Promise<string> {
   })
 }
 
-export async function submitCommand(command: Command, signal?: AbortSignal): Promise<string> {
-  return apiFetch<string>({
-    path: "/command",
-    method: "POST",
-    body: command,
-    signal,
-  })
+export async function submitCommand(command: Command, signal?: AbortSignal): Promise<[string, string]> {
+  try {
+    return await apiFetch<[string, string]>({
+      path: "/command",
+      method: "POST",
+      body: command,
+      signal,
+    })
+  } catch (error) {
+    // Log the error with more details
+    console.error("[submitCommand] Failed to submit command:", error)
+    if (error instanceof ApiError) {
+      console.error("[submitCommand] ApiError details:", {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      })
+      
+      // If backend is having issues (500 error or timeout), provide helpful error message
+      if (error.status === 500 || error.status === 408) {
+        const msg = error.status === 500 
+          ? "Backend server error. Check that: 1) OpenAI API key is set, 2) MCP server is running, 3) All dependencies are installed"
+          : "Command request timed out. The AI service may be taking too long or not responding."
+        const detailError = new ApiError(msg, error.status, error.code, error.details)
+        throw detailError
+      }
+    }
+    throw error
+  }
 }
 
 export async function attachSession(
@@ -696,7 +664,6 @@ export async function fetchArchetypes(signal?: AbortSignal) {
       signal,
     })
   } catch (error) {
-    ApiLogger.log("fetchArchetypes", "GET", { signal: Boolean(signal) }, null, error)
     return []
   }
 }
@@ -712,9 +679,7 @@ export async function selectArchetype(
       body: { archetype_id: archetypeId },
       signal,
     })
-    ApiLogger.log("selectArchetype", "POST", { archetypeId }, { success: true })
   } catch (error) {
-    ApiLogger.log("selectArchetype", "POST", { archetypeId }, null, error)
     throw error
   }
 }
@@ -725,15 +690,21 @@ export async function startGame(
 ): Promise<GameState> {
   const sessionId = generateSessionId()
   
-  // First, attach the session to set the game-session cookie
+  // Attach the session to set the game-session cookie
   await attachSession(sessionId, signal)
   
-  // Add a small delay to ensure the cookie is properly set before selecting archetype
-  // This is necessary because cookie setting and retrieval can have race conditions in the browser
-  await new Promise(resolve => setTimeout(resolve, 100))
+  // Wait longer to ensure the cookie is persisted by the browser
+  // This is critical for cross-origin requests with samesite="none"
+  await new Promise(resolve => setTimeout(resolve, 1000))
 
-  // Select the archetype on the backend - requires active session
-  await selectArchetype(payload.archetypeId, signal)
+  // Try to select the archetype on the backend, but continue if it fails
+  // The archetype can still be set through other means or defaults to warboss
+  try {
+    await selectArchetype(payload.archetypeId, signal)
+  } catch (error) {
+    // Log but don't throw - archetype selection is not critical for game start
+    console.warn("Archetype selection failed, continuing with defaults:", error)
+  }
 
   const [backendState, words] = await Promise.all([
     getSessionState(signal),
@@ -761,7 +732,6 @@ export async function startGame(
     words: state.player.words,
   })
 
-  ApiLogger.log("startGame", "POST", { payload, sessionId }, state)
   return state
 }
 
@@ -793,7 +763,6 @@ export async function fetchGameState(
     words: state.player.words,
   })
 
-  ApiLogger.log("fetchGameState", "GET", { sessionId }, state)
   return state
 }
 
@@ -822,7 +791,7 @@ export async function submitTurn(
     player: meta?.playerName ?? "Warboss",
   }
 
-  const responseText = await submitCommand(command, signal)
+  const [responseText, enemyResponseText] = await submitCommand(command, signal)
   const updatedBackendState = await waitForStateChange(
     previousBackendState.actions.length,
     signal,
@@ -830,7 +799,30 @@ export async function submitTurn(
 
   const nextWords = payload.allowEnemySpeak === false ? words : await safeGetNewWords(signal)
   const enemyActions = updatedBackendState.actions.slice(previousBackendState.actions.length)
-  const enemyWords = payload.allowEnemySpeak === false ? [] : actionsToWords(enemyActions)
+  
+  // Try to extract enemy words from backend actions first, fall back to parsing response text
+  let enemyWords: string[] = []
+  if (payload.allowEnemySpeak !== false) {
+    // Filter for enemy actions
+    const enemyActionsOnly = enemyActions.filter((action) => action.actor === "enemy")
+    if (enemyActionsOnly.length > 0) {
+      enemyWords = actionsToWords(enemyActionsOnly)
+    } else {
+      // Fallback: derive from enemy response text if no actions recorded
+      enemyWords = deriveEnemyWordsFromResponse(enemyResponseText)
+    }
+  }
+
+  // Debug logging
+  console.log("[submitTurn] Enemy action extraction:", {
+    previousActionCount: previousBackendState.actions.length,
+    updatedActionCount: updatedBackendState.actions.length,
+    enemyActionsCount: enemyActions.length,
+    enemyActions: enemyActions.map((a) => ({ name: a.name, actor: a.actor })),
+    extractedEnemyWords: enemyWords,
+    enemyResponseText,
+    allowEnemySpeak: payload.allowEnemySpeak,
+  })
 
   const previousState = adaptBackendSession({
     sessionId,
@@ -861,6 +853,7 @@ export async function submitTurn(
   const resolution = buildTurnResolution({
     sessionId,
     responseText,
+    enemyResponseText,
     usedWords: words,
     previousBackend: previousBackendState,
     updatedBackend: updatedBackendState,
@@ -868,7 +861,6 @@ export async function submitTurn(
     enemyWords,
   })
 
-  ApiLogger.log("submitTurn", "POST", { sessionId, payload }, resolution)
   return resolution
 }
 
@@ -897,8 +889,5 @@ export async function endGame(sessionId: string, signal?: AbortSignal) {
     wavesCleared: state.wave,
     seed: state.seed,
   }
-  ApiLogger.log("endGame", "POST", { sessionId }, result)
   return result
 }
-
-export { ApiLogger }

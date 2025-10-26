@@ -19,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -94,6 +93,26 @@ export function OrkBattleUI({
       })),
     [state.player.words],
   )
+
+  const enemyWordTokens = useMemo<WordToken[]>(
+    () =>
+      state.enemy.words.map((word, index) => ({
+        id: `enemy-${word}-${index}`,
+        word,
+        index,
+      })),
+    [state.enemy.words],
+  )
+
+  // Debug logging for enemy words in UI
+  useEffect(() => {
+    if (state.enemy.words && state.enemy.words.length > 0) {
+      console.log("[OrkBattleUI] Enemy words available:", {
+        count: state.enemy.words.length,
+        words: state.enemy.words,
+      })
+    }
+  }, [state.enemy.words])
 
   const idToWord = useMemo(
     () => new Map(wordTokens.map((token) => [token.id, token.word])),
@@ -315,6 +334,18 @@ export function OrkBattleUI({
               title="Enemy Ork" 
               isPlayer={false}
             />
+            
+            {state.enemy.words.length > 0 && (
+              <WordGrid
+                words={enemyWordTokens}
+                selectedWordIds={[]}
+                selectionOrder={{}}
+                onToggleWord={() => {}}
+                maxWords={maxWords}
+                isPlayer={false}
+                disabled={true}
+              />
+            )}
           </div>
 
         </div>
@@ -585,13 +616,12 @@ function RewardsPanel({ rewards, isLoading, onPick }: RewardsPanelProps) {
         {isLoading && !rewards ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Fetching rewards...
+            Loading rewards…
           </div>
         ) : rewards && rewards.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-3">
             {rewards.map((choice) => {
-              const isCustom = choice.id === "buff-addword"
-              const isPending = pendingChoice === choice.id
+              const isCustom = choice.type === "custom"
               return (
                 <div
                   key={choice.id}
@@ -619,12 +649,12 @@ function RewardsPanel({ rewards, isLoading, onPick }: RewardsPanelProps) {
                         placeholder="DAKKA"
                         value={customWord}
                         onChange={(event) => setCustomWord(event.target.value)}
-                        disabled={isPending || Boolean(isLoading)}
+                        disabled={pendingChoice === choice.id || Boolean(isLoading)}
                       />
                       <Select
                         value={customRole}
                         onValueChange={(value) => setCustomRole(value as Role)}
-                        disabled={isPending || Boolean(isLoading)}
+                        disabled={pendingChoice === choice.id || Boolean(isLoading)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Role" />
@@ -642,9 +672,9 @@ function RewardsPanel({ rewards, isLoading, onPick }: RewardsPanelProps) {
 
                   <Button
                     onClick={() => handlePick(choice)}
-                    disabled={isPending || Boolean(isLoading)}
+                    disabled={pendingChoice === choice.id || Boolean(isLoading)}
                   >
-                    {isPending ? (
+                    {pendingChoice === choice.id ? (
                       <>
                         <Loader2 className="mr-2 size-4 animate-spin" />
                         Claiming…
