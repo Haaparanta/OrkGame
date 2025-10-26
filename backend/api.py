@@ -136,7 +136,16 @@ async def new_words_fetch(chat: Chat = Depends(get_chat)):
     Example:
         "WAAGH KRUMP DAKKA CHOPPA BOYZ STOMPA SHOOTA BURNA"
     """
-    return await chat.get_new_words()
+    try:
+        words = await chat.get_new_words()
+        if words is None:
+            raise HTTPException(status_code=500, detail="Failed to generate words")
+        # Join list of words into a space-separated string
+        if isinstance(words, list):
+            return " ".join(str(w) for w in words)
+        return str(words)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating words: {str(e)}")
 
 
 @app.post("/command")

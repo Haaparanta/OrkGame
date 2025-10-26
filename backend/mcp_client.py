@@ -85,11 +85,27 @@ class Chat:
         return None
 
     async def get_new_words(self):
-        res = await self.agent.ainvoke({"messages": self.word_generator_prompt})
-        for key in res.keys():
-            for msg in res[key]:
-                if msg.type == "ai" and msg.content != "":
-                    sub_result = msg.content.split(" ")
-                    sub_result.append("NO")
-                    return sub_result
-        return None
+        """
+        Generate new Ork battle words using the AI model.
+        
+        Returns:
+            str: Space-separated string of exactly 8 Orkish battle words plus "NO" (9 total), or None if generation fails
+        """
+        try:
+            res = await self.agent.ainvoke({"messages": self.word_generator_prompt})
+            for key in res.keys():
+                for msg in res[key]:
+                    if msg.type == "ai" and msg.content != "":
+                        # Clean up the content and split into words
+                        words = msg.content.strip().split()
+                        # Filter out empty strings and limit to exactly 8 words
+                        words = [w for w in words if w and len(w) > 0][:8]
+                        # Always add "NO" as a fallback option (9 total)
+                        words.append("NO")
+                        # Return as space-separated string
+                        return " ".join(words)
+            logger.warning("No AI response received for word generation")
+            return None
+        except Exception as e:
+            logger.error(f"Error generating new words: {str(e)}")
+            return None
