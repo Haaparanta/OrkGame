@@ -68,7 +68,7 @@ def armor_up(session_id: str, player_turn: bool):
 def omniboost(session_id: str, player_turn: bool):
     """Your roar bellows over the battlefield, perform when all commands point to Waarghing"""
     logging.info("Omniboosting")
-
+    send_ipc_message(session_id, ActionEnum.omniboost, player_turn)
 
 if __name__ == "__main__":
     print("Starting server...")
