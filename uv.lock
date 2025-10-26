@@ -524,7 +524,7 @@ requires-dist = [
     { name = "langchain-mcp-adapters", specifier = ">=0.1.11" },
     { name = "langchain-openai", specifier = ">=1.0.1" },
     { name = "langgraph", specifier = ">=1.0.1" },
-    { name = "mcp", specifier = ">=1.19.0" },
+    { name = "mcp", specifier = "==1.19.0" },
 ]
 
 [[package]]

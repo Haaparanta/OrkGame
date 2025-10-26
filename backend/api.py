@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
     async with Chat() as chat:
         app.state.chat = chat
 
-    yield
+        yield
 
     ipc.cancel()
     delete_socket()

@@ -1,12 +1,13 @@
 import logging
-from mcp.server.fastmcp import FastMCP
 import sys
+from mcp.server.fastmcp import FastMCP
 
 from ipc import send_ipc_message
 from action import ActionEnum
 
+
 # Create an MCP server
-mcp = FastMCP("northwind")
+mcp = FastMCP("orkgame")
 
 
 @mcp.tool()
@@ -72,6 +73,8 @@ def omniboost(session_id: str, player_turn: bool):
 
 
 if __name__ == "__main__":
-    print("Starting server...")
-    # Initialize and run the server
-    mcp.run(transport="stdio")
+    with open("/tmp/log", "w+") as f:
+        print("Starting MCP server...", file=sys.stderr, flush=True)
+        # Initialize and run the server
+        mcp.run(transport="stdio")
+        print("Stopping MCP server...", file=sys.stderr, flush=True)

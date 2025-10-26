@@ -10,5 +10,5 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.11",
     "langchain-openai>=1.0.1",
     "langgraph>=1.0.1",
-    "mcp>=1.19.0",
+    "mcp==1.19.0",
 ]
