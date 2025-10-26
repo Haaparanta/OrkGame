@@ -8,8 +8,10 @@ from pydantic.type_adapter import TypeAdapter
 
 try:
     from .action import ActionEnum, Effect
+    from .enemy import Enemy
 except ImportError:
     from action import ActionEnum, Effect
+    from enemy import Enemy
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -39,7 +41,9 @@ class GameSession(BaseModel):
     enemyarmor: int
     gameover: bool
     kills: int
-    
+
+    current_enemy: Enemy
+
     actions: list[Action] = Field(default_factory=list)
 
     @classmethod
@@ -54,42 +58,53 @@ class GameSession(BaseModel):
             enemymaxhealth=100,
             enemyrage=1,
             enemyarmor=1,
-            gameover=0,
+            gameover=False,
             kills=0,
+            current_enemy=Enemy("Loota"),
         )
 
-    def act(self, action: str):
+    def act(self, action: str, player_turn: bool):
         action = ActionEnum(action)
         effect = action.effect()
         logger.info("Got effect: %s", effect)
-        if (self.currenthealth + effect.self_heal) > (effect.self_damage*(1/self.armor)*self.enemyrage/1):
-            self.currenthealth = self.currenthealth + effect.self_heal - (effect.self_damage*(1/self.armor)*self.enemyrage/1)
+        if (self.currenthealth + effect.self_heal) > (
+            effect.self_damage * (1 / self.armor) * self.enemyrage / 1
+        ):
+            self.currenthealth = (
+                self.currenthealth
+                + effect.self_heal
+                - int(effect.self_damage * (1 / self.armor) * self.enemyrage / 1)
+            )
         else:
             self.currenthealth = 0
-            self.gameover = 1
-        #Ei mennä alle 1
+            self.gameover = True
+        # Force to not be below 1
         if (self.armor + effect.gain_armor - effect.loose_armor) >= 1:
             self.armor = self.armor + effect.gain_armor - effect.loose_armor
         else:
             self.armor = 1
-        #Ei mennä alle 1
+        # Do not go below 1
         if (self.rage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
             self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
         else:
             self.rage = 1
-        
-        if (self.enemycurrenthealth + effect.enemy_heal) > ((effect.enemy_damage*(1/self.enemyarmor))*self.rage/1):
-            self.enemycurrenthealth = (
-                self.enemycurrenthealth + effect.enemy_heal - (effect.enemy_damage*(1/self.enemyarmor))*self.rage/1
+
+        if (self.enemycurrenthealth + effect.enemy_heal) > (
+            (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage / 1
+        ):
+            self.enemycurrenthealth = int(
+                self.enemycurrenthealth
+                + effect.enemy_heal
+                - (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage / 1
             )
         else:
             self.kills += 1
-            self.enemycurrenthealth=100+(50*self.kills)
-            self.enemymax=100+(50*self.kills)
-            self.enemyrage=1+self.kills//2
-            self.enemyarmor=1+self.kills//2
-            self.maxhealth+=20
-        
+            self.enemycurrenthealth = 100 + (50 * self.kills)
+            self.enemymax = 100 + (50 * self.kills)
+            self.enemyrage = 1 + self.kills // 2
+            self.enemyarmor = 1 + self.kills // 2
+            self.maxhealth += 20
+
         self.actions.append(Action(name=action, actor=Actor.player, effect=effect))
 
 

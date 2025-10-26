@@ -1,6 +1,5 @@
 import logging
 from mcp.server.fastmcp import FastMCP
-from mcp.types import Resource
 import sys
 
 from ipc import send_ipc_message
@@ -13,50 +12,50 @@ session_id = sys.argv[1]
 
 
 @mcp.tool()
-def shoot_rocket():
+def shoot_rocket(session_id: str, player_turn: bool):
     """Shoots your armor shredding rocket"""
-    logging.info(f"FIRING ROCKET")
-    send_ipc_message(session_id, ActionEnum.shoot_rocket)
+    logging.info("FIRING ROCKET")
+    send_ipc_message(session_id, ActionEnum.shoot_rocket, player_turn)
     return
 
 
 @mcp.tool()
-def rage_up():
+def rage_up(session_id: str, player_turn: bool):
     """Shouts a powerful battlecry that gives you a damage amplifier and might fear enemies"""
-    logging.info(f"Shouting Waag (rage_up)")
-    send_ipc_message(session_id, ActionEnum.rage_up)
+    logging.info("Shouting Waag (rage_up)")
+    send_ipc_message(session_id, ActionEnum.rage_up, player_turn)
     return
 
 
 @mcp.tool()
-def patch_up():
+def patch_up(session_id: str, player_turn: bool):
     """Heals your battlewounds"""
-    logging.info(f"Healing now (patch_up)")
-    send_ipc_message(session_id, ActionEnum.patch_up)
+    logging.info("Healing now (patch_up)")
+    send_ipc_message(session_id, ActionEnum.patch_up, player_turn)
     return
 
 
 @mcp.tool()
-def charge():
+def charge(session_id: str, player_turn: bool):
     """Charges in to hit the enemy with your axe"""
-    logging.info(f"Hitting enemy with axe now (charge)")
-    send_ipc_message(session_id, ActionEnum.charge)
+    logging.info("Hitting enemy with axe now (charge)")
+    send_ipc_message(session_id, ActionEnum.charge, player_turn)
     return
 
 
 @mcp.tool()
-def throw_granade():
+def throw_granade(session_id: str, player_turn: bool):
     """Throws your highly explosive granade"""
-    logging.info(f"Throwing granade")
-    send_ipc_message(session_id, ActionEnum.throw_granade)
+    logging.info("Throwing granade")
+    send_ipc_message(session_id, ActionEnum.throw_granade, player_turn)
     return
 
 
 @mcp.tool()
-def fire_flamethrower():
+def fire_flamethrower(session_id: str, player_turn: bool):
     """Burn enemies with your flamethrower"""
-    logging.info(f"Flamethrowing now")
-    send_ipc_message(session_id, ActionEnum.fire_flamethrower)
+    logging.info("Flamethrowing now")
+    send_ipc_message(session_id, ActionEnum.fire_flamethrower, player_turn)
     return
 
 

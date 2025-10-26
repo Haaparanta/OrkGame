@@ -11,8 +11,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request, Response, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.client.stdio import stdio_client
-from mcp import ClientSession, StdioServerParameters
 from pydantic import BaseModel
 
 from .storage import (
@@ -24,6 +22,7 @@ from .storage import (
 from .ipc import delete_socket, ipc_server
 
 from .mcp_client import Command, Chat
+
 
 class AttachSessionRequest(BaseModel):
     session_name: str
@@ -47,9 +46,17 @@ async def lifespan(app: FastAPI):
     """
     app.state.state = read_state()
     ipc = asyncio.create_task(ipc_server(app.state.state))
+    async with Chat() as chat:
+        app.state.chat = chat
+
     yield
+
     ipc.cancel()
     delete_socket()
+
+
+def get_chat(request: Request):
+    return request.app.state.chat
 
 
 app = FastAPI(lifespan=lifespan)
@@ -86,9 +93,7 @@ def current_session(request: Request):
 
 
 @app.get("/session-state")
-def current_session_state(
-    request: Request
-) -> GameSession:
+def current_session_state(request: Request) -> GameSession:
     """
     Get the current game session state.
 
@@ -103,15 +108,15 @@ def current_session_state(
         GameSession: Complete game state including player stats, enemy stats, and actions
     """
     game_session = request.cookies.get("game-session")
-    
+
     if game_session is None:
         # Return a temporary session with default values
         return GameSession.new_session("temp_session")
-    
+
     state = request.app.state.state.get(game_session)
     if state is None:
         state = GameSession.new_session(game_session)
-    
+
     save_session_state(request, state)
     return state
 
@@ -136,10 +141,7 @@ async def new_words_fetch():
 
 
 @app.post("/command")
-async def command(
-    command: Command,
-    request: Request,
-):
+async def command(command: Command, request: Request, chat: Chat = Depends(get_chat)):
     """
     Process a battle command from the player.
 
@@ -166,40 +168,45 @@ async def command(
     """
     # Get or create session state
     game_session = request.cookies.get("game-session")
-    
+
     if game_session is None:
         # Create a temporary session for this command
         game_session = "temp_session"
-    
+
     state = request.app.state.state.get(game_session)
     if state is None:
         state = GameSession.new_session(game_session)
-    
+
     save_session_state(request, state)
-    chad = Chat()
-
-    server_params = StdioServerParameters(
-        command="python",
-        args=["backend/mcp_server.py", state.name],
+    response = await chat.process_query(
+        game_session,
+        True,
+        query="1. "
+        + command.action1
+        + ", "
+        + command.action2
+        + ", "
+        + command.action3
+        + " 2. "
+        + command.player
+        + " 3. "
+        + state.current_enemy.role,
     )
-
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            # Initialize the connection
-            await session.initialize()
-            response = await chad.process_query(
-                session=session,
-                query="1. "
-                + command.action1
-                + ", "
-                + command.action2
-                + ", "
-                + command.action3
-                + " 2. "
-                + command.player
-                + " 3. "
-                + command.enemy,
-            )
+    enemy_voice_line = await state.current_enemy.next_action(chat)
+    response = await chat.process_query(
+        game_session,
+        False,
+        query="1. "
+        + enemy_voice_line[0]
+        + ", "
+        + enemy_voice_line[1]
+        + ", "
+        + enemy_voice_line[2]
+        + " 2. "
+        + state.current_enemy.role
+        + " 3. "
+        + command.player,
+    )
     return response
 
 
@@ -225,17 +232,17 @@ def attach_session(response: Response, request_data: AttachSessionRequest = Body
         inject the session ID into other endpoints.
     """
     session_name = request_data.session_name
-    
+
     if not session_name:
         raise HTTPException(status_code=400, detail="session_name is required")
-    
+
     response.set_cookie(
-        key="game-session", 
+        key="game-session",
         value=session_name,
         httponly=False,  # Allow JS access for debugging
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
-        max_age=86400  # 24 hours
+        max_age=86400,  # 24 hours
     )
-    
+
     return {"message": "Session attached successfully", "session_name": session_name}

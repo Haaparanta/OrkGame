@@ -1,9 +1,8 @@
 import logging
-from mcp import ClientSession
+from mcp import ClientSession, StdioServerParameters, stdio_client
 from pydantic import BaseModel
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
-import asyncio
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -13,7 +12,6 @@ class Command(BaseModel):
     action2: str
     action3: str
     player: str
-    enemy: str
 
 
 # Output for diagrams
@@ -47,16 +45,37 @@ class Chat:
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
         descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
 
-    async def process_query(self, session: ClientSession, query: str):
-        # Load mcp tools and create AI agent
-        logger.info("mcp_tools")
-        tools = await load_mcp_tools(session)
-        logger.info("agent")
-        agent = create_react_agent(
-            model="openai:gpt-5-nano-2025-08-07", tools=tools, prompt=self.system_prompt
+        self.server_params = StdioServerParameters(
+            command="python",
+            args=["backend/mcp_server.py"],
         )
-        logger.info("invoke")
-        res = await agent.ainvoke({"messages": query})
+
+    async def __aenter__(self):
+        self.client = stdio_client(self.server_params)
+        (read, write) = await self.client.__aenter__()
+        self.session = ClientSession(read, write)
+        session = await self.session.__aenter__()
+        await session.initialize()
+        tools = await load_mcp_tools(session)
+        agent = create_react_agent(
+            model="openai:gpt-5-nano-2025-08-07",
+            tools=tools,
+            prompt=self.system_prompt,
+        )
+        self.agent = agent
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.session.__aexit__(exc_type, exc, tb)
+        await self.client.__aexit__(exc_type, exc, tb)
+
+    async def process_query(self, session_id: str, player_turn: bool, query: str):
+        res = await self.agent.ainvoke(
+            {
+                "messages": query,
+                "input": {"session_id": session_id, "player_turn": player_turn},
+            }
+        )
         logger.info("done")
         for key in res.keys():
             for msg in res[key]:
@@ -66,12 +85,7 @@ class Chat:
         return None
 
     async def get_new_words(self):
-        agent = create_react_agent(
-            model="openai:gpt-5-nano-2025-08-07",
-            tools=[],
-            prompt="You are a helpful Warhammer 40k Ork linguist.",
-        )
-        res = await agent.ainvoke({"messages": self.word_generator_prompt})
+        res = await self.agent.ainvoke({"messages": self.word_generator_prompt})
         for key in res.keys():
             for msg in res[key]:
                 if msg.type == "ai" and msg.content != "":
@@ -79,15 +93,3 @@ class Chat:
                     sub_result.append("NO")
                     return sub_result
         return None
-
-    # Testing function to run locally
-    async def chat_loop(self, session: ClientSession):
-        while True:
-            query = input("\nQuery: ").strip()
-            # self.messages.append(query)
-            await self.process_query(session, query)
-
-
-if __name__ == "__main__":
-    chat = Chat()
-    asyncio.run(chat.run())

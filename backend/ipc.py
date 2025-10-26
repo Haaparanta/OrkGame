@@ -24,7 +24,9 @@ async def ipc_server(state: dict[str, GameSession]):
             if not data:
                 return
             message = json.loads(data)
-            state[message["session_name"]].act(message["action"])
+            state[message["session_name"]].act(
+                message["action"], message["player_turn"]
+            )
 
         except Exception:
             logger.exception("Failed to read from socket")
@@ -39,11 +41,13 @@ async def ipc_server(state: dict[str, GameSession]):
         await server.serve_forever()
 
 
-def send_ipc_message(session_name, action):
+def send_ipc_message(session_name, action: str, player_turn: bool):
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     client.connect(SOCKET_PATH)
 
-    message = json.dumps({"session_name": session_name, "action": action})
+    message = json.dumps(
+        {"session_name": session_name, "action": action, "player_turn": player_turn}
+    )
     client.sendall(message.encode())
 
     client.close()
