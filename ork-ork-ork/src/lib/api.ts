@@ -724,9 +724,15 @@ export async function startGame(
   signal?: AbortSignal,
 ): Promise<GameState> {
   const sessionId = generateSessionId()
+  
+  // First, attach the session to set the game-session cookie
   await attachSession(sessionId, signal)
+  
+  // Add a small delay to ensure the cookie is properly set before selecting archetype
+  // This is necessary because cookie setting and retrieval can have race conditions in the browser
+  await new Promise(resolve => setTimeout(resolve, 100))
 
-  // Select the archetype on the backend
+  // Select the archetype on the backend - requires active session
   await selectArchetype(payload.archetypeId, signal)
 
   const [backendState, words] = await Promise.all([

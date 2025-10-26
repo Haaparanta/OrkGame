@@ -42,6 +42,7 @@ class GameSession(BaseModel):
     enemyarmor: int
     gameover: bool
     kills: int
+    archetype_id: str | None = None
 
     current_enemy: Enemy
 

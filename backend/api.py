@@ -274,9 +274,10 @@ def attach_session(response: Response, request_data: AttachSessionRequest = Body
     response.set_cookie(
         key="game-session",
         value=session_name,
+        path="/",
         httponly=False,  # Allow JS access for debugging
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
+        secure=True,  # Use secure in production (HTTPS)
+        samesite="none",  # Allow cross-site cookie delivery
         max_age=86400,  # 24 hours
     )
 
@@ -335,6 +336,15 @@ def select_archetype(
     game_session = request.cookies.get("game-session")
     if game_session is None:
         raise HTTPException(status_code=400, detail="No active session. Attach a session first.")
+
+    # Get or create the session state
+    state = request.app.state.state.get(game_session)
+    if state is None:
+        state = GameSession.new_session(game_session)
+    
+    # Store the archetype in the session state
+    state.archetype_id = archetype_id
+    save_session_state(request, state)
 
     # Get the archetype details
     archetype = next((arch for arch in ARCHETYPES if arch["id"] == archetype_id), None)
