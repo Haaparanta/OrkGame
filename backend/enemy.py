@@ -7,6 +7,8 @@ except ImportError:
 
 
 class Enemy(BaseModel):
+    role: str
+
     def __init__(self, role: str) -> None:
         self.role = role
 
