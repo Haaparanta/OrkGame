@@ -28,6 +28,36 @@ class AttachSessionRequest(BaseModel):
     session_name: str
 
 
+class ArchetypeRequest(BaseModel):
+    archetype_id: str
+
+
+# Define available archetypes
+ARCHETYPES = [
+    {
+        "id": "warboss",
+        "name": "Warboss",
+        "description": "Boss of the WAAAGH! Durable leader with balanced stats.",
+        "baseStats": {"hpMax": 110, "armor": 2, "rage": 1},
+        "startingWords": ["WAAGH", "SMASH", "COVER"],
+    },
+    {
+        "id": "rokkit-boy",
+        "name": "Rokkit Boy",
+        "description": "Unstable explosives expert. Low armor, high burst.",
+        "baseStats": {"hpMax": 80, "armor": 0, "rage": 0},
+        "startingWords": ["SHOOT", "BOOM", "COVER"],
+    },
+    {
+        "id": "burna-boy",
+        "name": "Burna Boy",
+        "description": "Flame-loving pyromaniac. Keeps the fight hot.",
+        "baseStats": {"hpMax": 95, "armor": 1, "rage": 0},
+        "startingWords": ["BURN", "CHARGE", "FIXIT"],
+    },
+]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -254,3 +284,66 @@ def attach_session(response: Response, request_data: AttachSessionRequest = Body
     )
 
     return {"message": "Session attached successfully", "session_name": session_name}
+
+
+@app.get("/archetypes")
+def get_archetypes():
+    """
+    Get all available archetypes.
+
+    Returns a list of all playable archetype options including their stats,
+    descriptions, and starting words.
+
+    Returns:
+        list: List of archetype dictionaries containing id, name, description, baseStats, and startingWords
+    """
+    return ARCHETYPES
+
+
+@app.post("/archetype")
+def select_archetype(
+    request_data: ArchetypeRequest,
+    request: Request,
+    response: Response,
+):
+    """
+    Set the player's selected archetype for the current session.
+
+    Validates that the selected archetype exists and stores it in the session state.
+
+    Args:
+        request_data (ArchetypeRequest): Request data containing the archetype_id
+        request (Request): The HTTP request object
+        response (Response): The HTTP response object
+
+    Returns:
+        dict: Success message with the selected archetype
+
+    Raises:
+        HTTPException: If the archetype_id is invalid
+    """
+    archetype_id = request_data.archetype_id
+
+    if not archetype_id:
+        raise HTTPException(status_code=400, detail="archetype_id is required")
+
+    # Validate that the archetype exists
+    valid_ids = {arch["id"] for arch in ARCHETYPES}
+    if archetype_id not in valid_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid archetype_id. Valid options: {', '.join(valid_ids)}",
+        )
+
+    game_session = request.cookies.get("game-session")
+    if game_session is None:
+        raise HTTPException(status_code=400, detail="No active session. Attach a session first.")
+
+    # Get the archetype details
+    archetype = next((arch for arch in ARCHETYPES if arch["id"] == archetype_id), None)
+
+    return {
+        "message": "Archetype selected successfully",
+        "archetype_id": archetype_id,
+        "archetype": archetype,
+    }
