@@ -68,48 +68,95 @@ class GameSession(BaseModel):
         action = ActionEnum(action)
         effect = action.effect()
         logger.info("Got effect: %s", effect)
-        if (self.currenthealth + effect.self_heal) > (
-            effect.self_damage * (1 / self.armor) * self.enemyrage
-        ):
-            self.currenthealth = math.ceil(
-                self.currenthealth
-                + effect.self_heal
-                - (effect.self_damage * (1 / self.armor) * self.enemyrage)
-            )
-            if self.currenthealth > self.maxhealth:
-                self.currenthealth = self.maxhealth
-        else:
-            self.currenthealth = 0
-            self.gameover = True
-        # Force to not be below 1
-        if (self.armor + effect.gain_armor - effect.loose_armor) >= 1:
-            self.armor = self.armor + effect.gain_armor - effect.loose_armor
-        else:
-            self.armor = 1
-        # Do not go below 1
-        if (self.rage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
-            self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
-        else:
-            self.rage = 1
+        if player_turn:
+            # Force to not be below 1
+            if (self.armor + effect.gain_armor - effect.loose_armor) >= 1:
+                self.armor = self.armor + effect.gain_armor - effect.loose_armor
+            else:
+                self.armor = 1
+            # Do not go below 1
+            if (self.rage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
+                self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
+            else:
+                self.rage = 1
+                
+            if (self.currenthealth + effect.self_heal) > (
+                effect.self_damage * (1 / self.armor) * self.enemyrage
+            ):
+                self.currenthealth = math.ceil(
+                    self.currenthealth
+                    + effect.self_heal
+                    - (effect.self_damage * (1 / self.armor) * self.enemyrage)
+                )
+                if self.currenthealth > self.maxhealth:
+                    self.currenthealth = self.maxhealth
+            else:
+                self.currenthealth = 0
+                self.gameover = True
 
-        if (self.enemycurrenthealth + effect.enemy_heal) > (
-            (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
-        ):
-            self.enemycurrenthealth = math.ceil(
-                self.enemycurrenthealth
-                + effect.enemy_heal
-                - (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
-            )
-            if self.enemycurrenthealth > self.enemymaxhealth:
-                self.enemycurrenthealth = self.enemymaxhealth
-        else:
-            self.kills += 1
-            self.enemycurrenthealth = 100 + (50 * self.kills)
-            self.enemymax = 100 + (50 * self.kills)
-            self.enemyrage = 1 + self.kills // 2
-            self.enemyarmor = 1 + self.kills // 2
-            self.maxhealth += 20
+            if (self.enemycurrenthealth + effect.enemy_heal) > (
+                (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
+            ):
+                self.enemycurrenthealth = math.ceil(
+                    self.enemycurrenthealth
+                    + effect.enemy_heal
+                    - (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
+                )
+                if self.enemycurrenthealth > self.enemymaxhealth:
+                    self.enemycurrenthealth = self.enemymaxhealth
+            else:
+                self.kills += 1
+                self.enemycurrenthealth = 100 + (50 * self.kills)
+                self.enemymax = 100 + (50 * self.kills)
+                self.enemyrage = 1 + self.kills // 2
+                self.enemyarmor = 1 + self.kills // 2
+                self.maxhealth += 20
 
+        else:
+            # Force to not be below 1
+            if (self.enemyarmor + effect.gain_armor - effect.loose_armor) >= 1:
+                self.enemyarmor = self.enemyarmor + effect.gain_armor - effect.loose_armor
+            else:
+                self.enemyarmor = 1
+            # Do not go below 1
+            if (self.enemyrage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
+                self.enemyrage = self.enemyrage + effect.gain_damage_boost - effect.loose_damage_boost
+            else:
+                self.enemyrage = 1
+                
+            if (self.enemycurrenthealth + effect.self_heal) > (
+                effect.self_damage * (1 / self.enemyarmor) * self.rage
+            ):
+                self.enemycurrenthealth = math.ceil(
+                    self.enemycurrenthealth
+                    + effect.self_heal
+                    - (effect.self_damage * (1 / self.enemyarmor) * self.rage)
+                )
+                if self.enemycurrenthealth > self.enemymaxhealth:
+                    self.enemycurrenthealth = self.enemymaxhealth
+            else:
+                self.kills += 1
+                self.enemycurrenthealth = 100 + (50 * self.kills)
+                self.enemymax = 100 + (50 * self.kills)
+                self.enemyrage = 1 + self.kills // 2
+                self.enemyarmor = 1 + self.kills // 2
+                self.maxhealth += 20
+
+            if (self.currenthealth + effect.enemy_heal) > (
+                (effect.enemy_damage * (1 / self.armor)) * self.enemyrage
+            ):
+                self.currenthealth = math.ceil(
+                    self.currenthealth
+                    + effect.enemy_heal
+                    - (effect.enemy_damage * (1 / self.armor)) * self.enemyrage
+                )
+                if self.currenthealth > self.maxhealth:
+                    self.currenthealth = self.maxhealth
+            else:
+                self.currenthealth = 0
+                self.gameover = True
+
+        
         self.actions.append(Action(name=action, actor=Actor.player, effect=effect))
 
 
