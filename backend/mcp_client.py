@@ -81,7 +81,7 @@ class Chat:
         res = await self.agent.ainvoke(
             {
                 "session_id: "+ session_id+
-                "player_turn: "+ player_turn+
+                "player_turn: "+ str(player_turn) +
                 "messages: "+ query
             }
         )
