@@ -13,19 +13,19 @@ def rocket_hit():
 
 
 def charge_hit():
-    return random.random() > 0.5
+    return random.random() > 0.25
 
 
 def granade_hit():
-    return random.random() > 0.8
+    return random.random() > 0.3
 
 
 def flamethrower_fail():
     return random.random() > 0.1
 
-
+#Menetetään tai ei menetetä 1 rage
 def fail_dmg_boost_loss():
-    return int(-0.2 * random.randint(0, 8) + 10)
+    return int(random.random() > 0.5)
 
 
 class Effect(BaseModel):
@@ -55,28 +55,27 @@ class ActionEnum(enum.StrEnum):
                 if rocket_hit():
                     effect.enemy_damage = rocket_damage()
                 else:
-                    effect.self_damage = rocket_damage()
+                    effect.loose_armor = 1
                     effect.loose_damage_boost = fail_dmg_boost_loss()
 
             case ActionEnum.rage_up:
-                effect.gain_damage_boost = random.randint(0, 10)
+                effect.gain_damage_boost = 1
 
             case ActionEnum.patch_up:
-                effect.self_heal = random.randint(5, 50)
-                effect.enemy_heal = int(random.randint(5, 50) / 2)
+                effect.self_heal = 50
 
             case ActionEnum.charge:
                 if charge_hit():
-                    effect.enemy_damage = 40
+                    effect.enemy_damage = 50
                     effect.self_damage = 10
                 else:
-                    effect.self_damage = 30
+                    effect.self_damage = 20
                     effect.loose_damage_boost = fail_dmg_boost_loss()
             case ActionEnum.throw_granade:
                 if granade_hit():
                     effect.enemy_damage = 25
                 else:
-                    effect.self_damage = 25
+                    effect.loose_armor = 1
                     effect.loose_damage_boost = fail_dmg_boost_loss()
             case ActionEnum.fire_flamethrower:
                 if flamethrower_fail():

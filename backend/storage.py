@@ -35,7 +35,11 @@ class GameSession(BaseModel):
     rage: int
     enemycurrenthealth: int
     enemymaxhealth: int
-
+    enemyrage: int
+    enemyarmor: int
+    gameover: bool
+    kills: int
+    
     actions: list[Action] = Field(default_factory=list)
 
     @classmethod
@@ -44,22 +48,48 @@ class GameSession(BaseModel):
             name=name,
             currenthealth=100,
             maxhealth=100,
-            armor=0,
-            rage=0,
+            armor=1,
+            rage=1,
             enemycurrenthealth=100,
             enemymaxhealth=100,
+            enemyrage=1,
+            enemyarmor=1,
+            gameover=0,
+            kills=0,
         )
 
     def act(self, action: str):
         action = ActionEnum(action)
         effect = action.effect()
         logger.info("Got effect: %s", effect)
-        self.currenthealth = self.currenthealth + effect.self_heal - effect.self_damage
-        self.armor = self.armor + effect.gain_armor - effect.loose_armor
-        self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
-        self.enemycurrenthealth = (
-            self.enemycurrenthealth + effect.enemy_heal - effect.enemy_damage
-        )
+        if (self.currenthealth + effect.self_heal) > (effect.self_damage*(1/self.armor)*self.enemyrage/1):
+            self.currenthealth = self.currenthealth + effect.self_heal - (effect.self_damage*(1/self.armor)*self.enemyrage/1)
+        else:
+            self.currenthealth = 0
+            self.gameover = 1
+        #Ei mennä alle 1
+        if (self.armor + effect.gain_armor - effect.loose_armor) >= 1:
+            self.armor = self.armor + effect.gain_armor - effect.loose_armor
+        else:
+            self.armor = 1
+        #Ei mennä alle 1
+        if (self.rage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
+            self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
+        else:
+            self.rage = 1
+        
+        if (self.enemycurrenthealth + effect.enemy_heal) > ((effect.enemy_damage*(1/self.enemyarmor))*self.rage/1):
+            self.enemycurrenthealth = (
+                self.enemycurrenthealth + effect.enemy_heal - (effect.enemy_damage*(1/self.enemyarmor))*self.rage/1
+            )
+        else:
+            self.kills += 1
+            self.enemycurrenthealth=100+(50*self.kills)
+            self.enemymax=100+(50*self.kills)
+            self.enemyrage=1+self.kills//2
+            self.enemyarmor=1+self.kills//2
+            self.maxhealth+=20
+        
         self.actions.append(Action(name=action, actor=Actor.player, effect=effect))
 
 
