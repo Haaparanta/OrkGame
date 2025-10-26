@@ -45,7 +45,6 @@ export interface Command {
   action2: string
   action3: string
   player: string
-  enemy: string
 }
 
 interface BackendEffect {
@@ -73,6 +72,11 @@ interface BackendGameSession {
   rage: number
   enemycurrenthealth: number
   enemymaxhealth: number
+  enemyrage: number
+  enemyarmor: number
+  gameover: boolean
+  kills: number
+  current_enemy: { role: string }
   actions: BackendAction[]
 }
 
@@ -486,6 +490,14 @@ function buildPlan(actions: BackendAction[], fallbackText: string): Plan {
   }
 }
 
+function capitalizeEnemyRole(role: string): string {
+  return role
+    .split(/[\s_-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
+    .toUpperCase()
+}
+
 function adaptBackendSession({
   sessionId,
   backend,
@@ -507,7 +519,10 @@ function adaptBackendSession({
 
   const phase = derivePhase(backend)
   const score = deriveScore(backend)
-  const rageModifier = 1 + backend.rage / 10
+  
+  // Derive enemy name from current_enemy role
+  const enemyRole = backend.current_enemy?.role ?? previousState?.enemy.id ?? "enemy"
+  const enemyName = previousState?.enemy.name ?? capitalizeEnemyRole(enemyRole)
 
   return {
     sessionId,
@@ -529,16 +544,16 @@ function adaptBackendSession({
       flags: previousState?.player.flags ?? {},
     },
     enemy: {
-      id: previousState?.enemy.id ?? "enemy",
-      name: previousState?.enemy.name ?? "HUMIE INTERLOPER",
+      id: enemyRole,
+      name: enemyName,
       hp: clamp(backend.enemycurrenthealth, 0, backend.enemymaxhealth),
       hpMax: backend.enemymaxhealth,
-      rage: previousState?.enemy.rage ?? 0,
-      cover: previousState?.enemy.cover ?? false,
-      armor: previousState?.enemy.armor ?? 0,
+      rage: backend.enemyrage ?? previousState?.enemy.rage ?? 0,
+      cover: backend.enemyarmor > 0,
+      armor: backend.enemyarmor ?? previousState?.enemy.armor ?? 0,
       distance: previousState?.enemy.distance ?? "medium",
       words: safeEnemyWords,
-      traits: previousState?.enemy.traits ?? ["mysterious"],
+      traits: previousState?.enemy.traits ?? [enemyRole],
       flags: previousState?.enemy.flags ?? {},
     },
     limits: {
@@ -802,7 +817,6 @@ export async function submitTurn(
     action2: words[1] ?? "SMASH",
     action3: words[2] ?? "DAKKA",
     player: meta?.playerName ?? "Warboss",
-    enemy: meta?.enemyName ?? "Human",
   }
 
   const responseText = await submitCommand(command, signal)
