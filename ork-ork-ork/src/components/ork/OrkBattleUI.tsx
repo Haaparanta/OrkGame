@@ -198,7 +198,7 @@ export function OrkBattleUI({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-stone-900 to-slate-800">
+    <div className="w-full">
       {/* Header Bar */}
       <div className="border-b border-primary/20 bg-card/80 backdrop-blur px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">

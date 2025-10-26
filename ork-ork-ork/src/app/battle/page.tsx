@@ -107,23 +107,25 @@ export default function BattlePage() {
       }
 
       return (
-        <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-12">
-          <OrkBattleUI
-            state={mockState}
-            lastTurn={undefined}
-            rewards={undefined}
-            error={undefined}
-            isLoading={false}
-            onSubmitTurn={handleSubmitTurn}
-            onPickReward={handlePickReward}
-            onEndRun={handleEndRun}
-          />
+        <main className="animated-gradient flex min-h-screen w-full flex-col">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-12">
+            <OrkBattleUI
+              state={mockState}
+              lastTurn={undefined}
+              rewards={undefined}
+              error={undefined}
+              isLoading={false}
+              onSubmitTurn={handleSubmitTurn}
+              onPickReward={handlePickReward}
+              onEndRun={handleEndRun}
+            />
+          </div>
         </main>
       )
     }
 
     return (
-      <main className="flex min-h-screen items-center justify-center px-6">
+      <main className="animated-gradient flex min-h-screen items-center justify-center px-6">
         <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
           <Loader2 className="size-6 animate-spin" />
           <p>Loading session…</p>
@@ -133,17 +135,19 @@ export default function BattlePage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-12">
-      <OrkBattleUI
-        state={state}
-        lastTurn={lastTurn}
-        rewards={rewards}
-        error={error}
-        isLoading={isLoading}
-        onSubmitTurn={handleSubmitTurn}
-        onPickReward={handlePickReward}
-        onEndRun={handleEndRun}
-      />
+    <main className="animated-gradient flex min-h-screen w-full flex-col">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-12">
+        <OrkBattleUI
+          state={state}
+          lastTurn={lastTurn}
+          rewards={rewards}
+          error={error}
+          isLoading={isLoading}
+          onSubmitTurn={handleSubmitTurn}
+          onPickReward={handlePickReward}
+          onEndRun={handleEndRun}
+        />
+      </div>
     </main>
   )
 }

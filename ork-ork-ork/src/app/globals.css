@@ -132,3 +132,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 0%, 100% 100%;
+  }
+  25% {
+    background-position: 50% 50%, 50% 50%;
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%;
+  }
+  75% {
+    background-position: 50% 50%, 50% 50%;
+  }
+  100% {
+    background-position: 0% 0%, 100% 100%;
+  }
+}
+
+.animated-gradient {
+  background: linear-gradient(135deg, #1e3a8a 0%, transparent 50%),
+              linear-gradient(315deg, #7f1d1d 0%, transparent 50%);
+  background-size: 200% 200%, 200% 200%;
+  animation: gradientShift 20s ease-in-out infinite;
+}
