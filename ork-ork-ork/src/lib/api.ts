@@ -117,6 +117,54 @@ export class ApiError extends Error {
   }
 }
 
+// API logging utilities
+export interface ApiLog {
+  timestamp: string
+  method: string
+  endpoint: string
+  success: boolean
+  params?: unknown
+  result?: unknown
+  error?: unknown
+}
+
+const API_LOGS_KEY = "ork-ork-ork/api-logs"
+const MAX_LOGS = 100
+
+export function getApiLogs(): ApiLog[] {
+  if (typeof window === "undefined") return []
+  try {
+    const logs = localStorage.getItem(API_LOGS_KEY)
+    return logs ? JSON.parse(logs) : []
+  } catch {
+    return []
+  }
+}
+
+export function addApiLog(log: ApiLog): void {
+  if (typeof window === "undefined") return
+  try {
+    const logs = getApiLogs()
+    logs.push(log)
+    // Keep only the last MAX_LOGS entries
+    if (logs.length > MAX_LOGS) {
+      logs.shift()
+    }
+    localStorage.setItem(API_LOGS_KEY, JSON.stringify(logs))
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
+
+export function clearApiLogs(): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.removeItem(API_LOGS_KEY)
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
+
 interface FetchOptions {
   path: string
   method?: "GET" | "POST"
