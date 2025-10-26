@@ -7,10 +7,10 @@ from pydantic.type_adapter import TypeAdapter
 import math
 
 
-try:
+if __package__ == "backend":
     from .action import ActionEnum, Effect
     from .enemy import Enemy
-except ImportError:
+else:
     from action import ActionEnum, Effect
     from enemy import Enemy
 
@@ -76,10 +76,12 @@ class GameSession(BaseModel):
                 self.armor = 1
             # Do not go below 1
             if (self.rage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
-                self.rage = self.rage + effect.gain_damage_boost - effect.loose_damage_boost
+                self.rage = (
+                    self.rage + effect.gain_damage_boost - effect.loose_damage_boost
+                )
             else:
                 self.rage = 1
-                
+
             if (self.currenthealth + effect.self_heal) > (
                 effect.self_damage * (1 / self.armor) * self.enemyrage
             ):
@@ -115,15 +117,23 @@ class GameSession(BaseModel):
         else:
             # Force to not be below 1
             if (self.enemyarmor + effect.gain_armor - effect.loose_armor) >= 1:
-                self.enemyarmor = self.enemyarmor + effect.gain_armor - effect.loose_armor
+                self.enemyarmor = (
+                    self.enemyarmor + effect.gain_armor - effect.loose_armor
+                )
             else:
                 self.enemyarmor = 1
             # Do not go below 1
-            if (self.enemyrage + effect.gain_damage_boost - effect.loose_damage_boost) >= 1:
-                self.enemyrage = self.enemyrage + effect.gain_damage_boost - effect.loose_damage_boost
+            if (
+                self.enemyrage + effect.gain_damage_boost - effect.loose_damage_boost
+            ) >= 1:
+                self.enemyrage = (
+                    self.enemyrage
+                    + effect.gain_damage_boost
+                    - effect.loose_damage_boost
+                )
             else:
                 self.enemyrage = 1
-                
+
             if (self.enemycurrenthealth + effect.self_heal) > (
                 effect.self_damage * (1 / self.enemyarmor) * self.rage
             ):
@@ -156,7 +166,6 @@ class GameSession(BaseModel):
                 self.currenthealth = 0
                 self.gameover = True
 
-        
         self.actions.append(Action(name=action, actor=Actor.player, effect=effect))
 
 

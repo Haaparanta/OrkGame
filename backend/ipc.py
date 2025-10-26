@@ -7,9 +7,9 @@ import socket
 import asyncio
 
 
-try:
+if __package__ == "backend":
     from .storage import GameSession
-except ImportError:
+else:
     from storage import GameSession
 
 SOCKET_PATH = tempfile.gettempdir() + "/ork-game.socket"

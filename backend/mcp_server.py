@@ -70,7 +70,8 @@ def omniboost(session_id: str, player_turn: bool):
     logging.info("Omniboosting")
     send_ipc_message(session_id, ActionEnum.omniboost, player_turn)
 
+
 if __name__ == "__main__":
     print("Starting server...")
     # Initialize and run the server
-    mcp.run(transport="streamable-http")
+    mcp.run(transport="stdio")

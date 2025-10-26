@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
-try:
+if __package__ == "backend":
     from .mcp_client import Chat
-except ImportError:
+else:
     from mcp_client import Chat
 
 
