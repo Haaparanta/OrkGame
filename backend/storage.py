@@ -70,6 +70,7 @@ class GameSession(BaseModel):
         self.maxhealth = maxhp
         self.armor = armor
         self.rage = rage
+        self.currenthealth = maxhp
      
     
     def act(self, action: str, player_turn: bool):
