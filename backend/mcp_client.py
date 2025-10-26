@@ -30,15 +30,48 @@ class TextOutput(BaseModel):
     title: str
 
 
+class ToolChat:
+    def __init__(self, chat, session_id: str, player_turn: bool) -> None:
+        self.chat = chat
+        self.session_id = session_id
+        self.player_turn = player_turn
+
+    async def __aenter__(self):
+        self.server_params = StdioServerParameters(
+            command="python",
+            args=[
+                "-u",
+                "backend/mcp_server.py",
+                self.session_id,
+                str(self.player_turn),
+            ],
+        )
+
+        self.client = stdio_client(self.server_params)
+        (self.read, self.write) = await self.client.__aenter__()
+        self.session = ClientSession(self.read, self.write)
+        self.session = await self.session.__aenter__()
+        await self.session.initialize()
+        tools = await load_mcp_tools(self.session)
+        agent = create_agent(
+            model="openai:gpt-4.1-mini",
+            tools=tools,
+            system_prompt=self.chat.system_prompt,
+        )
+        return agent
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.session.__aexit__(exc_type, exc, tb)
+        await self.client.__aexit__(exc_type, exc, tb)
+
+
 # Class to handle mcp and agent interaction
 class Chat:
     def __init__(self):
         self.messages = []
         self.system_prompt: str = """You are an Ork AI agent called 'Da Warboss Protocol'.
         Every turn, you receive:
-        1. session_id — always pass this as the first argument to any MCP tool you as string
-        2. player_turn — always pass this as the second argument to any MCP tool you invoke as a boolean
-        3. messages — That are:
+        Messages — That are:
             1. Ork words to interpret
             2. The one doing the action
             3. The opponent
@@ -51,47 +84,17 @@ class Chat:
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
         descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
 
-        self.server_params = StdioServerParameters(
-            command="python",
-            args=["-u", "backend/mcp_server.py"],
-        )
-
-    async def __aenter__(self):
-        self.client = stdio_client(self.server_params)
-        (self.read, self.write) = await self.client.__aenter__()
-        self.session = ClientSession(self.read, self.write)
-        self.session = await self.session.__aenter__()
-        await self.session.initialize()
-        tools = await load_mcp_tools(self.session)
-        agent = create_agent(
-            model="openai:gpt-4.1-mini",
-            tools=tools,
-            system_prompt=self.system_prompt,
-        )
-        self.agent = agent
         self.voice_line_agent = create_agent(model="openai:gpt-4.1-mini")
 
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self.session.__aexit__(exc_type, exc, tb)
-        await self.client.__aexit__(exc_type, exc, tb)
-
     async def process_query(self, session_id: str, player_turn: bool, query: str):
-        print("Session id:", session_id)
-        res = await self.agent.ainvoke(
-            {
-                "session_id ": session_id,
-                "player_turn: ": player_turn,
-                "messages: ": query
-            }
-        )
-        logger.info("done")
-        for key in res.keys():
-            for msg in res[key]:
-                if msg.type == "ai" and msg.content != "":
-                    print("AI response\n", msg.content)
-                    return msg.content
+        async with ToolChat(self, session_id, player_turn) as agent:
+            res = await agent.ainvoke({"messages": query})
+            logger.info("done")
+            for key in res.keys():
+                for msg in res[key]:
+                    if msg.type == "ai" and msg.content != "":
+                        print("AI response\n", msg.content)
+                        return msg.content
         return None
 
     async def get_new_words(self):
@@ -125,11 +128,10 @@ class Chat:
 
 async def test():
     chat = Chat()
-    async with chat:
-        start = time.time()
-        resp = await chat.get_new_words()
-        end = time.time()
-        print("words:", resp, "took", end - start)
+    start = time.time()
+    resp = await chat.process_query("session-1", True, "")
+    end = time.time()
+    print("words:", resp, "took", end - start)
 
 
 if __name__ == "__main__":

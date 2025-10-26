@@ -5,13 +5,15 @@ from mcp.server.fastmcp import FastMCP
 from ipc import send_ipc_message
 from action import ActionEnum
 
+session_id = sys.argv[1]
+player_turn = sys.argv[2] == "True"
 
 # Create an MCP server
 mcp = FastMCP("orkgame")
 
 
 @mcp.tool()
-def shoot_rocket(session_id: str, player_turn: bool):
+def shoot_rocket():
     """Shoots your armor shredding rocket"""
     logging.info("FIRING ROCKET")
     send_ipc_message(session_id, ActionEnum.shoot_rocket, player_turn)
@@ -19,7 +21,7 @@ def shoot_rocket(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def rage_up(session_id: str, player_turn: bool):
+def rage_up():
     """Shouts a powerful battlecry that gives you a damage amplifier and might fear enemies"""
     logging.info("Shouting Waag (rage_up)")
     send_ipc_message(session_id, ActionEnum.rage_up, player_turn)
@@ -27,7 +29,7 @@ def rage_up(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def patch_up(session_id: str, player_turn: bool):
+def patch_up():
     """Heals your battlewounds"""
     logging.info("Healing now (patch_up)")
     send_ipc_message(session_id, ActionEnum.patch_up, player_turn)
@@ -35,7 +37,7 @@ def patch_up(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def charge(session_id: str, player_turn: bool):
+def charge():
     """Charges in to hit the enemy with your axe"""
     logging.info("Hitting enemy with axe now (charge)")
     send_ipc_message(session_id, ActionEnum.charge, player_turn)
@@ -43,7 +45,7 @@ def charge(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def throw_granade(session_id: str, player_turn: bool):
+def throw_granade():
     """Throws your highly explosive granade"""
     logging.info("Throwing granade")
     send_ipc_message(session_id, ActionEnum.throw_granade, player_turn)
@@ -51,7 +53,7 @@ def throw_granade(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def fire_flamethrower(session_id: str, player_turn: bool):
+def fire_flamethrower():
     """Burn enemies with your flamethrower"""
     logging.info("Flamethrowing now")
     send_ipc_message(session_id, ActionEnum.fire_flamethrower, player_turn)
@@ -59,14 +61,14 @@ def fire_flamethrower(session_id: str, player_turn: bool):
 
 
 @mcp.tool()
-def armor_up(session_id: str, player_turn: bool):
+def armor_up():
     """Reinforce your armor and prepare for booms"""
     logging.info("Armor up")
     send_ipc_message(session_id, ActionEnum.armor_up, player_turn)
 
 
 @mcp.tool()
-def omniboost(session_id: str, player_turn: bool):
+def omniboost():
     """Your roar bellows over the battlefield, perform when all commands point to Waarghing"""
     logging.info("Omniboosting")
     send_ipc_message(session_id, ActionEnum.omniboost, player_turn)

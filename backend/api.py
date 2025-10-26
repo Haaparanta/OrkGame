@@ -73,10 +73,8 @@ async def lifespan(app: FastAPI):
     """
     app.state.state = read_state()
     ipc = asyncio.create_task(ipc_server(app.state.state))
-    async with Chat() as chat:
-        app.state.chat = chat
-
-        yield
+    app.state.chat = Chat()
+    yield
 
     ipc.cancel()
     delete_socket()
