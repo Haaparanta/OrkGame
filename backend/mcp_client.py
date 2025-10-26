@@ -77,8 +77,10 @@ class Chat:
         res = await self.agent.ainvoke(
             {
                 "input": {
-                    "session_id": session_id,
-                    "player_turn": player_turn,
+                    "tool_input": {
+                        "session_id": session_id,
+                        "player_turn": player_turn,
+                    },
                     "messages": query,
                 }
             }
