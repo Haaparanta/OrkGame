@@ -73,4 +73,4 @@ def omniboost(session_id: str, player_turn: bool):
 if __name__ == "__main__":
     print("Starting server...")
     # Initialize and run the server
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")

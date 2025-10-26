@@ -1,5 +1,6 @@
 import logging
-from mcp import ClientSession, StdioServerParameters, stdio_client
+from mcp import ClientSession, stdio_client
+from mcp import SocketServerParameters
 from pydantic import BaseModel
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -45,9 +46,9 @@ class Chat:
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
         descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
 
-        self.server_params = StdioServerParameters(
+        self.server_params = SocketServerParameters(host="localhost", port=8000)(
             command="python",
-            args=["backend/mcp_server.py"],
+            args=["-u", "backend/mcp_server.py"],
         )
 
     async def __aenter__(self):
