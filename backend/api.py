@@ -39,21 +39,18 @@ ARCHETYPES = [
         "name": "Warboss",
         "description": "Boss of the WAAAGH! Durable leader with balanced stats.",
         "baseStats": {"hpMax": 110, "armor": 2, "rage": 1},
-        "startingWords": ["WAAGH", "SMASH", "COVER"],
     },
     {
         "id": "rokkit-boy",
         "name": "Rokkit Boy",
         "description": "Unstable explosives expert. Low armor, high burst.",
         "baseStats": {"hpMax": 80, "armor": 0, "rage": 0},
-        "startingWords": ["SHOOT", "BOOM", "COVER"],
     },
     {
         "id": "burna-boy",
         "name": "Burna Boy",
         "description": "Flame-loving pyromaniac. Keeps the fight hot.",
         "baseStats": {"hpMax": 95, "armor": 1, "rage": 0},
-        "startingWords": ["BURN", "CHARGE", "FIXIT"],
     },
 ]
 

@@ -16,7 +16,6 @@ export interface Archetype {
   name: string
   description?: string | null
   baseStats: Record<string, number>
-  startingWords: string[]
 }
 
 export interface Word {

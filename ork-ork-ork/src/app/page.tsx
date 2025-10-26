@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2, RotateCcw, Skull, Swords } from "lucide-react"
 
 import { fetchArchetypes } from "@/lib/api"
-import { DEFAULT_WORD_LIBRARY, useGameActions, useGameStore } from "@/lib/game"
+import { useGameActions, useGameStore } from "@/lib/game"
 import type { Archetype } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,39 +31,13 @@ const STAT_LABELS: Record<string, string> = {
   rage: "Rage",
 }
 
-const FALLBACK_ARCHETYPES: Archetype[] = [
-  {
-    id: "warboss",
-    name: "Warboss",
-    description: "Big boss with the loudest WAAGH. Heavy armor, steady dakka.",
-    baseStats: { hpMax: 110, armor: 2, rage: 1 },
-    startingWords: ["WAAGH", "SMASH", "COVER"],
-  },
-  {
-    id: "rokkit-boy",
-    name: "Rokkit Boy",
-    description: "Low HP, high boom. Shoots first, asks never.",
-    baseStats: { hpMax: 80, armor: 0, rage: 0 },
-    startingWords: ["SHOOT", "BOOM", "COVER"],
-  },
-  {
-    id: "burna-boy",
-    name: "Burna Boy",
-    description: "Fire solves most problems. Keeps zones molten.",
-    baseStats: { hpMax: 95, armor: 1, rage: 0 },
-    startingWords: ["BURN", "CHARGE", "FIXIT"],
-  },
-]
-
 export default function StartPage() {
   const router = useRouter()
   const store = useGameStore()
   const { startNewGame } = useGameActions()
 
-  const [archetypes, setArchetypes] = useState<Archetype[]>(FALLBACK_ARCHETYPES)
-  const [selectedArchetype, setSelectedArchetype] = useState<string | undefined>(
-    FALLBACK_ARCHETYPES[0]?.id,
-  )
+  const [archetypes, setArchetypes] = useState<Archetype[]>([])
+  const [selectedArchetype, setSelectedArchetype] = useState<string | undefined>()
   const [playerName, setPlayerName] = useState("")
   const [loadingArchetypes, setLoadingArchetypes] = useState(false)
   const [fetchError, setFetchError] = useState<string>()
@@ -81,12 +55,13 @@ export default function StartPage() {
           setArchetypes(items)
           setSelectedArchetype((current) => current ?? items[0]?.id)
         } else {
-          setFetchError("No archetypes returned. Using fallback roster.")
+          setFetchError("Failed to load archetypes from backend. Please refresh.")
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!isMounted) return
-        setFetchError("Unable to reach backend. Using fallback roster.")
+        console.error("Error fetching archetypes:", error)
+        setFetchError("Unable to reach backend. Please check your connection and try again.")
       })
       .finally(() => {
         if (isMounted) {
@@ -106,7 +81,7 @@ export default function StartPage() {
   }, [archetypes, selectedArchetype])
 
   const activeArchetype = useMemo(
-    () => archetypes.find((item) => item.id === selectedArchetype) ?? archetypes[0],
+    () => archetypes.find((item) => item.id === selectedArchetype),
     [archetypes, selectedArchetype],
   )
 

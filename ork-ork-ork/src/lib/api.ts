@@ -19,19 +19,6 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE ?? DEFAULT_BASE_URL).repl
   "",
 )
 
-const FALLBACK_WORDS = [
-  "WAAGH",
-  "SMASH",
-  "SHOOT",
-  "BOOM",
-  "CHARGE",
-  "COVER",
-  "BURN",
-  "FIXIT",
-  "SNEAK",
-  "DAKKA",
-]
-
 const ARCHETYPE_TRAITS: Record<string, string[]> = {
   warboss: ["boss", "unyielding"],
   "rokkit-boy": ["explosive"],
@@ -393,7 +380,7 @@ function normalizeWords(input?: string[] | string): string[] {
 function ensureWords(preferred?: string[], fallback?: string[]): string[] {
   const normalized = normalizeWords(preferred)
   if (normalized.length) return normalized
-  return normalizeWords(fallback ?? FALLBACK_WORDS)
+  return normalizeWords(fallback) ?? []
 }
 
 function computeSeed(sessionId: string) {
@@ -692,37 +679,44 @@ export async function attachSession(
   await apiFetch<AttachSessionResponse>({
     path: "/attach-session",
     method: "POST",
-    query: { session_name: sessionName },
     body: { session_name: sessionName },
     signal,
   })
 }
 
 export async function fetchArchetypes(signal?: AbortSignal) {
-  void signal
-  return [
-    {
-      id: "warboss",
-      name: "Warboss",
-      description: "Boss of the WAAAGH! Durable leader with balanced stats.",
-      baseStats: { hpMax: 110, armor: 2, rage: 1 },
-      startingWords: ["WAAGH", "SMASH", "COVER"],
-    },
-    {
-      id: "rokkit-boy",
-      name: "Rokkit Boy",
-      description: "Unstable explosives expert. Low armor, high burst.",
-      baseStats: { hpMax: 80, armor: 0, rage: 0 },
-      startingWords: ["SHOOT", "BOOM", "COVER"],
-    },
-    {
-      id: "burna-boy",
-      name: "Burna Boy",
-      description: "Flame-loving pyromaniac. Keeps the fight hot.",
-      baseStats: { hpMax: 95, armor: 1, rage: 0 },
-      startingWords: ["BURN", "CHARGE", "FIXIT"],
-    },
-  ]
+  try {
+    return await apiFetch<Array<{
+      id: string
+      name: string
+      description: string
+      baseStats: { hpMax: number; armor: number; rage: number }
+    }>>({
+      path: "/archetypes",
+      signal,
+    })
+  } catch (error) {
+    ApiLogger.log("fetchArchetypes", "GET", { signal: Boolean(signal) }, null, error)
+    return []
+  }
+}
+
+export async function selectArchetype(
+  archetypeId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    await apiFetch<{ message: string; archetype_id: string; archetype: unknown }>({
+      path: "/archetype",
+      method: "POST",
+      body: { archetype_id: archetypeId },
+      signal,
+    })
+    ApiLogger.log("selectArchetype", "POST", { archetypeId }, { success: true })
+  } catch (error) {
+    ApiLogger.log("selectArchetype", "POST", { archetypeId }, null, error)
+    throw error
+  }
 }
 
 export async function startGame(
@@ -731,6 +725,9 @@ export async function startGame(
 ): Promise<GameState> {
   const sessionId = generateSessionId()
   await attachSession(sessionId, signal)
+
+  // Select the archetype on the backend
+  await selectArchetype(payload.archetypeId, signal)
 
   const [backendState, words] = await Promise.all([
     getSessionState(signal),
