@@ -57,7 +57,7 @@ interface OrkBattleUIProps {
   rewards?: BuffChoice[]
   error?: string
   isLoading?: boolean
-  onSubmitTurn: (words: string[], allowEnemySpeak: boolean) => Promise<void> | void
+  onSubmitTurn: (words: string[]) => Promise<void> | void
   onPickReward?: (payload: PickBuffRequest) => Promise<void> | void
   onEndRun?: () => Promise<void> | void
 }
@@ -79,7 +79,6 @@ export function OrkBattleUI({
   onEndRun,
 }: OrkBattleUIProps) {
   const [selectedWordIds, setSelectedWordIds] = useState<string[]>([])
-  const [allowEnemySpeak, setAllowEnemySpeak] = useState(true)
   const [isSubmittingTurn, setIsSubmittingTurn] = useState(false)
   const [endingRun, setEndingRun] = useState(false)
 
@@ -146,9 +145,9 @@ export function OrkBattleUI({
     }
 
     try {
-      console.log('Starting turn submission', { selectedWords, allowEnemySpeak })
+      console.log('Starting turn submission', { selectedWords })
       setIsSubmittingTurn(true)
-      await onSubmitTurn(selectedWords, allowEnemySpeak)
+      await onSubmitTurn(selectedWords)
       setSelectedWordIds([]) // Clear selection after turn
       console.log('Turn submission completed successfully')
     } catch (error) {
@@ -277,18 +276,6 @@ export function OrkBattleUI({
             
             {phase === "battle" && (
               <form onSubmit={handleSubmitTurn} className="space-y-4">
-                <div className="flex items-center gap-4 rounded-lg border border-primary/20 bg-card/60 backdrop-blur p-4">
-                  <Checkbox
-                    id="allow-enemy"
-                    checked={allowEnemySpeak}
-                    onCheckedChange={(checked) => setAllowEnemySpeak(checked !== false)}
-                    disabled={isSubmittingTurn || Boolean(isLoading)}
-                  />
-                  <label htmlFor="allow-enemy" className="text-sm text-muted-foreground">
-                    Let enemy respond (better combat logs)
-                  </label>
-                </div>
-                
                 <div className="flex gap-3">
                   <Button
                     type="submit"

@@ -102,7 +102,6 @@ export interface StartGameRequest {
 
 export interface TurnRequest {
   words: string[]
-  allowEnemySpeak?: boolean
 }
 
 export interface PickBuffRequest {

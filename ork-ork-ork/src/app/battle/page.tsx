@@ -28,15 +28,15 @@ export default function BattlePage() {
     }
   }, [state?.sessionId, state?.phase, rewards, loadRewards])
 
-  const handleSubmitTurn = async (words: string[], allowEnemySpeak: boolean) => {
-    console.log('BattlePage handleSubmitTurn called', { words, allowEnemySpeak, state })
+  const handleSubmitTurn = async (words: string[]) => {
+    console.log('BattlePage handleSubmitTurn called', { words, state })
     if (!state) {
       console.log('No state available, returning early')
       return
     }
     try {
       console.log('Calling playTurn with sessionId:', state.sessionId)
-      await playTurn(state.sessionId, { words, allowEnemySpeak })
+      await playTurn(state.sessionId, { words })
       console.log('playTurn completed successfully')
     } catch (error) {
       console.error('playTurn failed:', error)
