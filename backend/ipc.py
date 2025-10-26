@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import tempfile
 import json
 import socket
@@ -42,7 +43,11 @@ async def ipc_server(state: dict[str, GameSession]):
 
 
 def send_ipc_message(session_name, action: str, player_turn: bool):
-    print(f"Send ipc: session={session_name} action={action} player_turn={player_turn}")
+    print(
+        f"Send ipc: session={session_name} action={action} player_turn={player_turn}",
+        file=sys.stderr,
+        flush=True,
+    )
     client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     client.connect(SOCKET_PATH)
 
