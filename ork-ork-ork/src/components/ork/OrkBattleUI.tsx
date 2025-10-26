@@ -1,6 +1,5 @@
 'use client'
 
-import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { Loader2, MessageCircle, Skull, Sparkles, Swords, Trophy, User } from "lucide-react"
 
@@ -11,6 +10,7 @@ import type {
   Role,
   TurnResolution,
 } from "@/lib/types"
+import { AvatarImage } from "@/components/AvatarImage"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -328,26 +328,6 @@ export function OrkBattleUI({
               title="Enemy Ork" 
               isPlayer={false}
             />
-            
-            {lastTurn?.enemyWords && (
-              <WordGrid
-                words={lastTurn.enemyWords.map((word, index) => ({
-                  id: `enemy-${word}-${index}`,
-                  word,
-                  index,
-                }))}
-                selectedWordIds={lastTurn.enemyWords.map((word, index) => `enemy-${word}-${index}`)}
-                selectionOrder={lastTurn.enemyWords.reduce((acc, word, index) => {
-                  acc[`enemy-${word}-${index}`] = index + 1
-                  return acc
-                }, {} as Record<string, number>)}
-                onToggleWord={() => {}} // Enemy words are not interactive
-                maxWords={3}
-                isPlayer={false}
-                disabled={true}
-                title="Enemy's Last Attack"
-              />
-            )}
           </div>
 
         </div>
@@ -796,8 +776,30 @@ function CharacterCard({ character, title, isPlayer, playerName }: CharacterCard
   const hpPercent = character.hpMax > 0 ? Math.max(0, Math.min(100, (character.hp / character.hpMax) * 100)) : 0
   const themeClass = isPlayer ? "border-blue-500/30 bg-blue-500/5" : "border-red-500/30 bg-red-500/5"
   const accentColor = isPlayer ? "text-blue-400" : "text-red-400"
-  const imageSrc = isPlayer ? `/ork-avatar-${character.id}.png` : "/ork-avatar-enemy.png"
+  
+  // Map character IDs to image paths
+  const imagePathMap: Record<string, string> = {
+    'warboss': 'ork-avatar-warboss.png',
+    'rokkit-boy': 'ork-avatar-rokkit-boy.png',
+    'burna-boy': 'ork-avatar-burna-boy.png',
+    'enemy': 'ork-avatar-enemy.png',
+  }
+  
+  const imageSrc = isPlayer 
+    ? `/${imagePathMap[character.id] || 'ork-avatar-warboss.png'}`
+    : '/ork-avatar-enemy.png'
   const imageAlt = isPlayer ? `${character.name} avatar` : "Enemy ork avatar"
+
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = event.currentTarget
+    console.error(`Failed to load image from: ${img.src}`)
+    console.error(`Image element details:`, { src: img.src, alt: img.alt })
+    setImageError(true)
+  }
+
+  useEffect(() => {
+    console.log(`[CharacterCard] Image path for ${character.id}: ${imageSrc}`)
+  }, [imageSrc, character.id])
 
   return (
     <Card className={cn("border-2", themeClass)}>
@@ -826,16 +828,13 @@ function CharacterCard({ character, title, isPlayer, playerName }: CharacterCard
             "size-24 rounded-xl border-2 p-2",
             isPlayer ? "border-blue-500/50 bg-blue-500/10" : "border-red-500/50 bg-red-500/10"
           )}>
-            <div className="relative flex size-full items-center justify-center overflow-hidden rounded-lg">
+            <div className="flex size-full items-center justify-center overflow-hidden rounded-lg">
               {!imageError ? (
-                <Image
+                <AvatarImage
                   src={imageSrc}
                   alt={imageAlt}
-                  fill
-                  sizes="6rem"
-                  className="object-cover"
-                  unoptimized
-                  onError={() => setImageError(true)}
+                  className="h-full w-full object-cover"
+                  onError={handleImageError}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-muted/20">
