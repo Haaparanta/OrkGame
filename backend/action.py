@@ -43,7 +43,7 @@ class Effect(BaseModel):
 class ActionEnum(enum.StrEnum):
     shoot_rocket = "shoot_rocket"
     rage_up = "rage_up"
-    patch_up = "rage_up"
+    patch_up = "heal"
     charge = "charge"
     throw_granade = "throw_granade"
     fire_flamethrower = "fire_flamethrower"
