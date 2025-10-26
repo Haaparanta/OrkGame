@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from "react"
+import Image from "next/image"
+import { useEffect, useMemo, useState } from "react"
 import { Loader2, MessageCircle, Skull, Sparkles, Swords, Trophy, User } from "lucide-react"
 
 import type {
@@ -787,9 +788,16 @@ interface CharacterCardProps {
 }
 
 function CharacterCard({ character, title, isPlayer, playerName }: CharacterCardProps) {
+  const [imageError, setImageError] = useState(false)
+  useEffect(() => {
+    setImageError(false)
+  }, [character.id])
+
   const hpPercent = character.hpMax > 0 ? Math.max(0, Math.min(100, (character.hp / character.hpMax) * 100)) : 0
   const themeClass = isPlayer ? "border-blue-500/30 bg-blue-500/5" : "border-red-500/30 bg-red-500/5"
   const accentColor = isPlayer ? "text-blue-400" : "text-red-400"
+  const imageSrc = isPlayer ? `/ork-avatar-${character.id}.png` : "/ork-avatar-enemy.png"
+  const imageAlt = isPlayer ? `${character.name} avatar` : "Enemy ork avatar"
 
   return (
     <Card className={cn("border-2", themeClass)}>
@@ -818,41 +826,26 @@ function CharacterCard({ character, title, isPlayer, playerName }: CharacterCard
             "size-24 rounded-xl border-2 p-2",
             isPlayer ? "border-blue-500/50 bg-blue-500/10" : "border-red-500/50 bg-red-500/10"
           )}>
-            {isPlayer ? (
-              <>
-                <img 
-                  src={`/ork-avatar-${character.id}.png`}
-                  alt={`${character.name} avatar`}
-                  className="h-full w-full rounded-lg object-cover"
-                  onError={(e) => {
-                    // Fallback to placeholder if image fails to load
-                    const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                    target.nextElementSibling?.classList.remove('hidden')
-                  }}
+            <div className="relative flex size-full items-center justify-center overflow-hidden rounded-lg">
+              {!imageError ? (
+                <Image
+                  src={imageSrc}
+                  alt={imageAlt}
+                  fill
+                  sizes="6rem"
+                  className="object-cover"
+                  onError={() => setImageError(true)}
                 />
-                <div className="hidden flex h-full w-full items-center justify-center rounded-lg bg-muted/20">
-                  <User className={cn("size-8", accentColor)} />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-muted/20">
+                  {isPlayer ? (
+                    <User className={cn("size-8", accentColor)} />
+                  ) : (
+                    <Skull className={cn("size-8", accentColor)} />
+                  )}
                 </div>
-              </>
-            ) : (
-              <>
-                <img 
-                  src="/ork-avatar-enemy.png"
-                  alt="Enemy ork avatar"
-                  className="h-full w-full rounded-lg object-cover"
-                  onError={(e) => {
-                    // Fallback to placeholder if image fails to load
-                    const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                    target.nextElementSibling?.classList.remove('hidden')
-                  }}
-                />
-                <div className="hidden flex h-full w-full items-center justify-center rounded-lg bg-muted/20">
-                  <Skull className={cn("size-8", accentColor)} />
-                </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

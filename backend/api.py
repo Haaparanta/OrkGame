@@ -9,7 +9,7 @@ utilizing MCP (Model Context Protocol) for AI-driven battle interactions.
 
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import Depends, FastAPI, Request, Response, HTTPException
+from fastapi import Depends, FastAPI, Request, Response, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from mcp.client.stdio import stdio_client
 from mcp import ClientSession, StdioServerParameters
@@ -206,7 +206,7 @@ async def command(
 
 
 @app.post("/attach-session")
-def attach_session(response: Response, request_data: AttachSessionRequest):
+def attach_session(response: Response, request_data: AttachSessionRequest = Body(...)):
     """
     Attach a client to a specific game session.
 

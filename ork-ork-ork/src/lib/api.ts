@@ -1,30 +1,54 @@
-// Backend API types based on actual Python models
+/* eslint-disable no-console */
+import type {
+  BuffChoice,
+  GameState,
+  Phase,
+  PickBuffRequest,
+  Plan,
+  PlanStep,
+  StartGameRequest,
+  TurnRequest,
+  TurnResolution,
+} from "./types"
+
+type QueryValue = string | number | boolean | undefined
+
+const DEFAULT_BASE_URL = "https://orkgamez.serverlul.win/api"
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE ?? DEFAULT_BASE_URL).replace(
+  /\/$/,
+  "",
+)
+
+const FALLBACK_WORDS = [
+  "WAAGH",
+  "SMASH",
+  "SHOOT",
+  "BOOM",
+  "CHARGE",
+  "COVER",
+  "BURN",
+  "FIXIT",
+  "SNEAK",
+  "DAKKA",
+]
+
+const ARCHETYPE_TRAITS: Record<string, string[]> = {
+  warboss: ["boss", "unyielding"],
+  "rokkit-boy": ["explosive"],
+  "burna-boy": ["pyromaniac"],
+}
+
+const SESSION_META_KEY = "ork-ork-ork/session-meta"
+
 export interface Command {
   action1: string
-  action2: string 
+  action2: string
   action3: string
   player: string
   enemy: string
 }
 
-export interface GameSession {
-  name: string
-  currenthealth: number
-  maxhealth: number
-  armor: number
-  rage: number
-  enemycurrenthealth: number
-  enemymaxhealth: number
-  actions: Action[]
-}
-
-export interface Action {
-  name: string
-  actor: "player" | "enemy"
-  effect: Effect
-}
-
-export interface Effect {
+interface BackendEffect {
   self_heal: number
   self_damage: number
   gain_armor: number
@@ -35,30 +59,77 @@ export interface Effect {
   enemy_damage: number
 }
 
-type QueryValue = string | number | boolean | undefined
+interface BackendAction {
+  name: string
+  actor: "player" | "enemy"
+  effect: BackendEffect
+}
 
-const DEFAULT_BASE_URL = "https://orkgamez.serverlul.win/api"
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE ?? DEFAULT_BASE_URL).replace(
-  /\/$/,
-  "",
-)
+interface BackendGameSession {
+  name: string
+  currenthealth: number
+  maxhealth: number
+  armor: number
+  rage: number
+  enemycurrenthealth: number
+  enemymaxhealth: number
+  actions: BackendAction[]
+}
 
-// API Logging utility
+interface AttachSessionResponse {
+  message: string
+  session_name: string
+}
+
+interface SessionMeta {
+  sessionId: string
+  playerName?: string
+  archetypeId?: string
+  words?: string[]
+  enemyName?: string
+}
+
+interface AdaptStateOptions {
+  sessionId: string
+  backend: BackendGameSession
+  playerName?: string
+  archetypeId?: string
+  playerWords?: string[]
+  enemyWords?: string[]
+  previousState?: GameState
+}
+
+interface ResolutionOptions {
+  sessionId: string
+  responseText: string
+  usedWords: string[]
+  previousBackend: BackendGameSession
+  updatedBackend: BackendGameSession
+  stateAfter: GameState
+  enemyWords: string[]
+}
+
 class ApiLogger {
   private static logToConsole = true
   private static logToStorage = true
   private static maxStoredLogs = 100
 
-  static log(endpoint: string, method: string, params: any, result: any, error?: any) {
+  static log(
+    endpoint: string,
+    method: string,
+    params: unknown,
+    result: unknown,
+    error?: unknown,
+  ) {
     const timestamp = new Date().toISOString()
     const logEntry = {
       timestamp,
       endpoint,
       method,
-      params: this.sanitizeParams(params),
-      result: this.sanitizeResult(result),
-      error: error ? this.sanitizeError(error) : null,
-      success: !error
+      params: this.sanitize(params),
+      result: this.sanitize(result),
+      error: error ? this.sanitize(error) : null,
+      success: !error,
     }
 
     if (this.logToConsole) {
@@ -70,84 +141,54 @@ class ApiLogger {
     }
 
     if (this.logToStorage) {
-      this.storeLog(logEntry)
+      this.store(logEntry)
     }
   }
 
-  private static sanitizeParams(params: any): any {
-    if (!params) return null
+  private static sanitize(value: unknown) {
+    if (value === undefined) return undefined
+    if (value === null) return null
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+      return value
     try {
-      return JSON.parse(JSON.stringify(params))
+      return JSON.parse(JSON.stringify(value))
     } catch {
-      return String(params)
+      return String(value)
     }
   }
 
-  private static sanitizeResult(result: any): any {
-    if (!result) return null
+  private static store(entry: Record<string, unknown>) {
+    if (typeof window === "undefined") return
     try {
-      // Truncate large results for logging
-      const stringified = JSON.stringify(result)
-      if (stringified.length > 1000) {
-        return `[Large result: ${stringified.length} chars] ${stringified.substring(0, 200)}...`
+      const existing = window.localStorage.getItem("orkgame_api_logs")
+      const logs = existing ? (JSON.parse(existing) as Record<string, unknown>[]) : []
+      logs.push(entry)
+      const excess = Math.max(0, logs.length - this.maxStoredLogs)
+      if (excess > 0) {
+        logs.splice(0, excess)
       }
-      return result
+      window.localStorage.setItem("orkgame_api_logs", JSON.stringify(logs))
     } catch {
-      return String(result)
+      // ignore localStorage failures
     }
   }
 
-  private static sanitizeError(error: any): any {
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack?.split('\n').slice(0, 5).join('\n') // Limit stack trace
-      }
-    }
-    if (error instanceof ApiError) {
-      return {
-        name: error.name,
-        message: error.message,
-        status: error.status,
-        code: error.code,
-        details: error.details
-      }
-    }
-    return error
-  }
-
-  private static storeLog(logEntry: any) {
+  static getLogs() {
+    if (typeof window === "undefined") return []
     try {
-      const stored = localStorage.getItem('orkgame_api_logs')
-      const logs = stored ? JSON.parse(stored) : []
-      logs.push(logEntry)
-      
-      // Keep only the latest logs
-      if (logs.length > this.maxStoredLogs) {
-        logs.splice(0, logs.length - this.maxStoredLogs)
-      }
-      
-      localStorage.setItem('orkgame_api_logs', JSON.stringify(logs))
-    } catch (error) {
-      console.warn('Failed to store API log:', error)
-    }
-  }
-
-  static getLogs(): any[] {
-    try {
-      const stored = localStorage.getItem('orkgame_api_logs')
-      return stored ? JSON.parse(stored) : []
+      const stored = window.localStorage.getItem("orkgame_api_logs")
+      return stored ? (JSON.parse(stored) as Record<string, unknown>[]) : []
     } catch {
       return []
     }
   }
 
   static clearLogs() {
+    if (typeof window === "undefined") return
     try {
-      localStorage.removeItem('orkgame_api_logs')
-    } catch (error) {
-      console.warn('Failed to clear API logs:', error)
+      window.localStorage.removeItem("orkgame_api_logs")
+    } catch {
+      // ignore
     }
   }
 }
@@ -188,7 +229,7 @@ function buildUrl(path: string, query?: Record<string, QueryValue>) {
     }
   }
 
-  const search = searchParams.size ? `?${searchParams.toString()}` : ""
+  const search = searchParams.size ? `?${searchParams}` : ""
   return `${API_BASE_URL}${normalizedPath}${search}`
 }
 
@@ -200,7 +241,7 @@ async function apiFetch<T>({
   signal,
   headers,
   cache = "no-store",
-  credentials = "include", // Default to include credentials
+  credentials = "include",
 }: FetchOptions): Promise<T> {
   const url = buildUrl(path, query)
   const init: RequestInit = {
@@ -222,19 +263,16 @@ async function apiFetch<T>({
     }
   }
 
-  // Log the request parameters
-  const requestParams = {
+  const requestSummary = {
     url,
     method,
     body,
     query,
     headers: init.headers,
-    credentials: init.credentials
+    credentials: init.credentials,
   }
 
   let response: Response
-  let result: T
-
   try {
     response = await fetch(url, init)
   } catch (error) {
@@ -242,7 +280,7 @@ async function apiFetch<T>({
       error instanceof Error ? error.message : "Network request failed",
       0,
     )
-    ApiLogger.log(path, method, requestParams, null, apiError)
+    ApiLogger.log(path, method, requestSummary, null, apiError)
     throw apiError
   }
 
@@ -261,155 +299,340 @@ async function apiFetch<T>({
     const code = (parsed as { error?: string })?.error
 
     const apiError = new ApiError(message, response.status, code, parsed)
-    ApiLogger.log(path, method, requestParams, null, apiError)
+    ApiLogger.log(path, method, requestSummary, null, apiError)
     throw apiError
   }
 
   const contentLength = response.headers.get("content-length")
-  if (contentLength === "0" || response.status === 204) {
-    result = undefined as T
-  } else {
-    result = (await response.json()) as T
-  }
+  const shouldParseJson = contentLength !== "0" && response.status !== 204
 
-  // Log successful response
-  ApiLogger.log(path, method, requestParams, result)
-  
+  const result = shouldParseJson ? ((await response.json()) as T) : (undefined as T)
+  ApiLogger.log(path, method, requestSummary, result)
   return result
 }
 
-// Get current session ID
-export async function getCurrentSession(signal?: AbortSignal): Promise<string> {
+function isBrowser() {
+  return typeof window !== "undefined"
+}
+
+function readSessionMetaMap(): Record<string, SessionMeta> {
+  if (!isBrowser()) return {}
   try {
-    const result = await apiFetch<string>({
-      path: "/current-session",
-      signal,
-    })
-    ApiLogger.log("getCurrentSession", "GET", { signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("getCurrentSession", "GET", { signal: !!signal }, null, error)
-    throw error
+    const raw = window.sessionStorage.getItem(SESSION_META_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, SessionMeta>) : {}
+  } catch {
+    return {}
   }
 }
 
-// Get current session state
-export async function getSessionState(signal?: AbortSignal): Promise<GameSession> {
+function writeSessionMetaMap(map: Record<string, SessionMeta>) {
+  if (!isBrowser()) return
   try {
-    const result = await apiFetch<GameSession>({
-      path: "/session-state", 
-      signal,
-    })
-    ApiLogger.log("getSessionState", "GET", { signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("getSessionState", "GET", { signal: !!signal }, null, error)
-    throw error
+    window.sessionStorage.setItem(SESSION_META_KEY, JSON.stringify(map))
+  } catch {
+    // ignore storage failures
   }
 }
 
-// Generate new Orkish words
-export async function getNewWordsPlayer(signal?: AbortSignal): Promise<string> {
-  try {
-    const result = await apiFetch<string>({
-      path: "/new-words-player",
-      signal,
-    })
-    ApiLogger.log("getNewWordsPlayer", "GET", { signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("getNewWordsPlayer", "GET", { signal: !!signal }, null, error)
-    throw error
-  }
+function getSessionMeta(sessionId: string): SessionMeta | undefined {
+  const map = readSessionMetaMap()
+  return map[sessionId]
 }
 
-// Submit a battle command
-export async function submitCommand(
-  command: Command,
-  signal?: AbortSignal,
-): Promise<string> {
-  try {
-    const result = await apiFetch<string>({
-      path: "/command",
-      method: "POST",
-      body: command,
-      signal,
-    })
-    ApiLogger.log("submitCommand", "POST", { command, signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("submitCommand", "POST", { command, signal: !!signal }, null, error)
-    throw error
+function persistSessionMeta(meta: SessionMeta) {
+  if (!meta.sessionId) return
+  const map = readSessionMetaMap()
+  map[meta.sessionId] = {
+    ...map[meta.sessionId],
+    ...meta,
   }
+  writeSessionMetaMap(map)
 }
 
-// Attach to a session
-export async function attachSession(
-  sessionName: string,
-  signal?: AbortSignal,
-): Promise<void> {
-  try {
-    const result = await apiFetch<void>({
-      path: "/attach-session",
-      method: "POST",
-      body: { session_name: sessionName },
-      signal,
-    })
-    ApiLogger.log("attachSession", "POST", { sessionName, signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("attachSession", "POST", { sessionName, signal: !!signal }, null, error)
-    throw error
+function generateSessionId() {
+  const prefix = "session"
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}_${crypto.randomUUID()}`
   }
+  const random = Math.random().toString(36).slice(2, 10)
+  return `${prefix}_${Date.now()}_${random}`
 }
 
-// Mock archetype data since backend doesn't have this endpoint
-export async function fetchArchetypes(signal?: AbortSignal): Promise<any[]> {
-  return [
-    {
-      id: "warboss",
-      name: "Warboss",
-      description: "A mighty Ork leader who commands respect through brutal strength",
-      baseStats: {
-        hp: 120,
-        armor: 10,
-        rage: 0
-      },
-      startingWords: ["WAAGH", "KRUMP", "BOSS"]
-    },
-    {
-      id: "burna-boy",
-      name: "Burna Boy", 
-      description: "Pyromaniac Ork who loves to burn everything in sight",
-      baseStats: {
-        hp: 80,
-        armor: 5,
-        rage: 0
-      },
-      startingWords: ["BURN", "FIRE", "ROAST"]
-    },
-    {
-      id: "rokkit-boy",
-      name: "Rokkit Boy",
-      description: "Explosive specialist who makes things go BOOM",
-      baseStats: {
-        hp: 90,
-        armor: 0,
-        rage: 0
-      },
-      startingWords: ["BOOM", "ROKKIT", "BLAST"]
+function sanitizeWord(word: string) {
+  return word.replace(/[^A-Za-z0-9!?\-]/g, "").toUpperCase()
+}
+
+function dedupeWords(words: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const word of words) {
+    const sanitized = sanitizeWord(word)
+    if (!sanitized) continue
+    if (!seen.has(sanitized)) {
+      seen.add(sanitized)
+      result.push(sanitized)
     }
-  ]
+  }
+  return result
+}
+
+function normalizeWords(input?: string[] | string): string[] {
+  if (Array.isArray(input)) {
+    return dedupeWords(input)
+  }
+  if (typeof input === "string") {
+    return dedupeWords(input.split(/\s+/))
+  }
+  return []
+}
+
+function ensureWords(preferred?: string[], fallback?: string[]): string[] {
+  const normalized = normalizeWords(preferred)
+  if (normalized.length) return normalized
+  return normalizeWords(fallback ?? FALLBACK_WORDS)
+}
+
+function computeSeed(sessionId: string) {
+  const digits = sessionId.replace(/\D/g, "")
+  if (digits) {
+    return Number.parseInt(digits.slice(-9), 10)
+  }
+  let hash = 0
+  for (let index = 0; index < sessionId.length; index += 1) {
+    hash = (hash << 5) - hash + sessionId.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function deriveScore(session: BackendGameSession) {
+  const damage = session.enemymaxhealth - session.enemycurrenthealth
+  const mitigation = session.maxhealth - session.currenthealth
+  return Math.max(0, damage * 10 - Math.max(0, mitigation * 5))
+}
+
+function derivePhase(session: BackendGameSession): Phase {
+  if (session.currenthealth <= 0) return "gameover"
+  if (session.enemycurrenthealth <= 0) return "rewards"
+  return "battle"
+}
+
+function describeEffect(action: BackendAction) {
+  const { effect } = action
+  const fragments: string[] = []
+  if (effect.enemy_damage > 0) {
+    fragments.push(`dealt ${effect.enemy_damage} dmg`)
+  }
+  if (effect.enemy_heal > 0) {
+    fragments.push(`healed enemy ${effect.enemy_heal}`)
+  }
+  if (effect.self_heal > 0) {
+    fragments.push(`self-healed ${effect.self_heal}`)
+  }
+  if (effect.self_damage > 0) {
+    fragments.push(`took ${effect.self_damage} dmg`)
+  }
+  if (effect.gain_damage_boost > 0) {
+    fragments.push(`rage +${effect.gain_damage_boost}`)
+  }
+  if (effect.loose_damage_boost > 0) {
+    fragments.push(`rage -${effect.loose_damage_boost}`)
+  }
+  if (effect.gain_armor > 0) {
+    fragments.push(`armor +${effect.gain_armor}`)
+  }
+  if (effect.loose_armor > 0) {
+    fragments.push(`armor -${effect.loose_armor}`)
+  }
+  return fragments.join("; ") || "no visible effect"
+}
+
+function actionToPlanStep(action: BackendAction): PlanStep {
+  const delta: Record<string, number> = {}
+  const { effect } = action
+  if (effect.self_heal) delta.self_heal = effect.self_heal
+  if (effect.self_damage) delta.self_damage = effect.self_damage
+  if (effect.enemy_damage) delta.enemy_damage = effect.enemy_damage
+  if (effect.enemy_heal) delta.enemy_heal = effect.enemy_heal
+  if (effect.gain_damage_boost) delta.rage_gain = effect.gain_damage_boost
+  if (effect.loose_damage_boost) delta.rage_loss = effect.loose_damage_boost
+  if (effect.gain_armor) delta.armor_gain = effect.gain_armor
+  if (effect.loose_armor) delta.armor_loss = effect.loose_armor
+
+  return {
+    action: action.name,
+    target: action.actor === "player" ? "enemy" : "player",
+    delta,
+    log: describeEffect(action),
+    tags: [],
+  }
+}
+
+function actionsToWords(actions: BackendAction[]) {
+  return actions.map((action) => action.name.replace(/_/g, " ").toUpperCase())
+}
+
+function buildPlan(actions: BackendAction[], fallbackText: string): Plan {
+  const steps = actions.map(actionToPlanStep)
+  const speaks = steps.map((step) => step.log).filter(Boolean)
+  return {
+    text: fallbackText,
+    steps,
+    speaks: speaks.length ? speaks : (fallbackText ? [fallbackText] : []),
+  }
+}
+
+function adaptBackendSession({
+  sessionId,
+  backend,
+  playerName,
+  archetypeId,
+  playerWords,
+  enemyWords,
+  previousState,
+}: AdaptStateOptions): GameState {
+  const nowIso = new Date().toISOString()
+  const safePlayerName =
+    playerName?.trim() ??
+    previousState?.player.name ??
+    (previousState?.player.id === "rokkit-boy" ? "ROKKIT LAD" : "ORK WARBOSS")
+  const safeArchetypeId =
+    archetypeId ?? previousState?.player.id ?? (playerName ? "warboss" : "warboss")
+  const safePlayerWords = ensureWords(playerWords, previousState?.player.words)
+  const safeEnemyWords = ensureWords(enemyWords, previousState?.enemy.words)
+
+  const phase = derivePhase(backend)
+  const score = deriveScore(backend)
+  const rageModifier = 1 + backend.rage / 10
+
+  return {
+    sessionId,
+    seed: computeSeed(sessionId),
+    wave: Math.max(1, Math.floor(score / 250) + 1),
+    score,
+    phase,
+    player: {
+      id: safeArchetypeId,
+      name: safePlayerName.toUpperCase(),
+      hp: clamp(backend.currenthealth, 0, backend.maxhealth),
+      hpMax: backend.maxhealth,
+      rage: backend.rage,
+      ammo: previousState?.player.ammo ?? 9,
+      cover: backend.armor > 0,
+      damageMod: Number(rageModifier.toFixed(2)),
+      armor: backend.armor,
+      distance: previousState?.player.distance ?? "medium",
+      words: safePlayerWords,
+      traits: ARCHETYPE_TRAITS[safeArchetypeId] ?? previousState?.player.traits ?? [],
+      flags: previousState?.player.flags ?? {},
+    },
+    enemy: {
+      id: previousState?.enemy.id ?? "enemy",
+      name: previousState?.enemy.name ?? "HUMIE INTERLOPER",
+      hp: clamp(backend.enemycurrenthealth, 0, backend.enemymaxhealth),
+      hpMax: backend.enemymaxhealth,
+      rage: previousState?.enemy.rage ?? 0,
+      ammo: previousState?.enemy.ammo ?? 9,
+      cover: previousState?.enemy.cover ?? false,
+      damageMod: previousState?.enemy.damageMod ?? 1,
+      armor: previousState?.enemy.armor ?? 0,
+      distance: previousState?.enemy.distance ?? "medium",
+      words: safeEnemyWords,
+      traits: previousState?.enemy.traits ?? ["mysterious"],
+      flags: previousState?.enemy.flags ?? {},
+    },
+    limits: {
+      maxWordsPerTurn: 3,
+      maxHand: Math.max(3, safePlayerWords.length),
+    },
+    createdAt: previousState?.createdAt ?? nowIso,
+    updatedAt: nowIso,
+  }
+}
+
+function buildTurnResolution({
+  responseText,
+  usedWords,
+  previousBackend,
+  updatedBackend,
+  stateAfter,
+  enemyWords,
+}: ResolutionOptions): TurnResolution {
+  const turnNumber = updatedBackend.actions.length
+  const newActions = updatedBackend.actions.slice(previousBackend.actions.length)
+  const playerActions = newActions.filter((action) => action.actor === "player")
+  const enemyActions = newActions.filter((action) => action.actor === "enemy")
+
+  const playerPlan = buildPlan(playerActions, responseText)
+  const enemyPlan = buildPlan(enemyActions, enemyActions.map(describeEffect).join(" "))
+
+  const logEntries = [
+    responseText,
+    ...newActions.map((action) => `${action.actor}: ${describeEffect(action)}`),
+  ].filter(Boolean)
+
+  const endState = {
+    enemyDefeated: stateAfter.enemy.hp <= 0,
+    playerDefeated: stateAfter.player.hp <= 0,
+  }
+
+  return {
+    turn: turnNumber,
+    playerWords: normalizeWords(usedWords),
+    enemyWords: normalizeWords(enemyWords),
+    playerPlan,
+    enemyPlan,
+    log: logEntries,
+    stateAfter,
+    end: endState,
+  }
+}
+
+async function waitForStateChange(
+  previousSize: number,
+  signal?: AbortSignal,
+): Promise<BackendGameSession> {
+  const maxAttempts = 5
+  const backoff = [100, 200, 350, 500, 750]
+  let lastState = await getSessionState(signal)
+  if (lastState.actions.length > previousSize) {
+    return lastState
+  }
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, backoff[attempt])
+      signal?.addEventListener("abort", () => {
+        clearTimeout(timer)
+        resolve()
+      })
+    })
+    lastState = await getSessionState(signal)
+    if (lastState.actions.length > previousSize) {
+      return lastState
+    }
+  }
+  return lastState
+}
+
+async function safeGetNewWords(signal?: AbortSignal): Promise<string[]> {
+  try {
+    const words = await getNewWordsPlayer(signal)
+    return ensureWords(normalizeWords(words))
+  } catch (error) {
+    ApiLogger.log("getNewWordsPlayer", "GET", { signal: Boolean(signal) }, null, error)
+    return []
+  }
 }
 
 export function getApiBaseUrl() {
   return API_BASE_URL
 }
 
-// Export ApiLogger for external access to logs
-export { ApiLogger }
-
-// Utility functions for log management
 export function getApiLogs() {
   return ApiLogger.getLogs()
 }
@@ -418,212 +641,251 @@ export function clearApiLogs() {
   ApiLogger.clearLogs()
 }
 
-// Adapter functions to bridge the gap between frontend expectations and backend reality
-// These functions adapt the simple backend API to match the complex frontend expectations
+export async function getCurrentSession(signal?: AbortSignal): Promise<string | null> {
+  return apiFetch<string | null>({
+    path: "/current-session",
+    signal,
+  })
+}
+
+export async function getSessionState(signal?: AbortSignal): Promise<BackendGameSession> {
+  return apiFetch<BackendGameSession>({
+    path: "/session-state",
+    signal,
+  })
+}
+
+export async function getNewWordsPlayer(signal?: AbortSignal): Promise<string> {
+  return apiFetch<string>({
+    path: "/new-words-player",
+    signal,
+  })
+}
+
+export async function submitCommand(command: Command, signal?: AbortSignal): Promise<string> {
+  return apiFetch<string>({
+    path: "/command",
+    method: "POST",
+    body: command,
+    signal,
+  })
+}
+
+export async function attachSession(
+  sessionName: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!sessionName) {
+    throw new ApiError("session_name is required", 400)
+  }
+  await apiFetch<AttachSessionResponse>({
+    path: "/attach-session",
+    method: "POST",
+    query: { session_name: sessionName },
+    body: { session_name: sessionName },
+    signal,
+  })
+}
+
+export async function fetchArchetypes(signal?: AbortSignal) {
+  void signal
+  return [
+    {
+      id: "warboss",
+      name: "Warboss",
+      description: "Boss of the WAAAGH! Durable leader with balanced stats.",
+      baseStats: { hpMax: 110, damageMod: 1, armor: 2, ammo: 2, rage: 1 },
+      startingWords: ["WAAGH", "SMASH", "COVER"],
+    },
+    {
+      id: "rokkit-boy",
+      name: "Rokkit Boy",
+      description: "Unstable explosives expert. Low armor, high burst.",
+      baseStats: { hpMax: 80, damageMod: 1.3, armor: 0, ammo: 3, rage: 0 },
+      startingWords: ["SHOOT", "BOOM", "COVER"],
+    },
+    {
+      id: "burna-boy",
+      name: "Burna Boy",
+      description: "Flame-loving pyromaniac. Keeps the fight hot.",
+      baseStats: { hpMax: 95, damageMod: 0.95, armor: 1, ammo: 2, rage: 0 },
+      startingWords: ["BURN", "CHARGE", "FIXIT"],
+    },
+  ]
+}
 
 export async function startGame(
-  payload: any,
+  payload: StartGameRequest & { playerName?: string },
   signal?: AbortSignal,
-): Promise<any> {
-  try {
-    // For now, just attach to a session and return a mock game state
-    const sessionName = `session_${Date.now()}`
-    await attachSession(sessionName, signal)
-    
-    // Return a mock game state that matches what the frontend expects
-    const result = {
-      sessionId: sessionName,
-      seed: 12345,
-      wave: 1,
-      score: 0,
-      phase: "battle",
-      player: {
-        id: "player",
-        name: "Ork Warboss",
-        hp: 100,
-        hpMax: 100,
-        rage: 0,
-        ammo: 10,
-        cover: false,
-        damageMod: 0,
-        armor: 0,
-        distance: "medium",
-        words: ["WAAGH", "KRUMP", "DAKKA"],
-        traits: [],
-        flags: {}
-      },
-      enemy: {
-        id: "enemy", 
-        name: "Enemy",
-        hp: 100,
-        hpMax: 100,
-        rage: 0,
-        ammo: 10,
-        cover: false,
-        damageMod: 0,
-        armor: 0,
-        distance: "medium",
-        words: [],
-        traits: [],
-        flags: {}
-      },
-      limits: {
-        maxWordsPerTurn: 3,
-        maxHand: 10
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    ApiLogger.log("startGame", "POST", { payload, signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("startGame", "POST", { payload, signal: !!signal }, null, error)
-    throw error
+): Promise<GameState> {
+  const sessionId = generateSessionId()
+  await attachSession(sessionId, signal)
+
+  const [backendState, words] = await Promise.all([
+    getSessionState(signal),
+    safeGetNewWords(signal),
+  ])
+
+  const meta: SessionMeta = {
+    sessionId,
+    playerName: payload.playerName?.trim(),
+    archetypeId: payload.archetypeId,
+    words,
   }
+
+  const state = adaptBackendSession({
+    sessionId,
+    backend: backendState,
+    playerName: meta.playerName,
+    archetypeId: payload.archetypeId,
+    playerWords: words,
+  })
+
+  persistSessionMeta({
+    ...meta,
+    playerName: state.player.name,
+    words: state.player.words,
+  })
+
+  ApiLogger.log("startGame", "POST", { payload, sessionId }, state)
+  return state
 }
 
 export async function fetchGameState(
   sessionId: string,
   signal?: AbortSignal,
-): Promise<any> {
-  try {
-    // Check if we have a valid session first
-    const currentSession = await getCurrentSession(signal)
-    if (!currentSession || currentSession === "temp_session") {
-      // If no valid session, create one
-      await attachSession(sessionId, signal)
-    }
-    
-    // Get the actual backend session state and convert it to frontend format
-    const backendState = await getSessionState(signal)
-    
-    const result = {
-      sessionId: sessionId,
-      seed: 12345,
-      wave: 1,
-      score: 0,
-      phase: "battle",
-      player: {
-        id: "player",
-        name: "Ork Warboss", 
-        hp: backendState.currenthealth,
-        hpMax: backendState.maxhealth,
-        rage: backendState.rage,
-        ammo: 10,
-        cover: false,
-        damageMod: 0,
-        armor: backendState.armor,
-        distance: "medium",
-        words: ["WAAGH", "KRUMP", "DAKKA"],
-        traits: [],
-        flags: {}
-      },
-      enemy: {
-        id: "enemy",
-        name: "Enemy",
-        hp: backendState.enemycurrenthealth,
-        hpMax: backendState.enemymaxhealth,
-        rage: 0,
-        ammo: 10,
-        cover: false,
-        damageMod: 0,
-        armor: 0,
-        distance: "medium",
-        words: [],
-        traits: [],
-        flags: {}
-      },
-      limits: {
-        maxWordsPerTurn: 3,
-        maxHand: 10
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    ApiLogger.log("fetchGameState", "GET", { sessionId, signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("fetchGameState", "GET", { sessionId, signal: !!signal }, null, error)
-    throw error
+): Promise<GameState> {
+  if (!sessionId) {
+    throw new ApiError("Missing session id", 400)
   }
+
+  await attachSession(sessionId, signal)
+  const backend = await getSessionState(signal)
+
+  const meta = getSessionMeta(sessionId)
+  const state = adaptBackendSession({
+    sessionId,
+    backend,
+    playerName: meta?.playerName,
+    archetypeId: meta?.archetypeId,
+    playerWords: meta?.words,
+    enemyWords: [],
+  })
+
+  persistSessionMeta({
+    sessionId,
+    playerName: state.player.name,
+    archetypeId: state.player.id,
+    words: state.player.words,
+  })
+
+  ApiLogger.log("fetchGameState", "GET", { sessionId }, state)
+  return state
 }
 
 export async function submitTurn(
   sessionId: string,
-  payload: any,
+  payload: TurnRequest,
   signal?: AbortSignal,
-): Promise<any> {
-  try {
-    // Convert frontend turn request to backend command
-    const words = payload.words || []
-    const command: Command = {
-      action1: words[0] || "WAAGH",
-      action2: words[1] || "KRUMP", 
-      action3: words[2] || "DAKKA",
-      player: "Warboss",
-      enemy: "Human"
-    }
-    
-    // Submit command to backend
-    const response = await submitCommand(command, signal)
-    
-    // Get updated state
-    const updatedState = await getSessionState(signal)
-    
-    // Return mock turn resolution
-    const result = {
-      turn: 1,
-      playerWords: words,
-      enemyWords: [],
-      playerPlan: {
-        text: response,
-        steps: [],
-        speaks: [response]
-      },
-      enemyPlan: {
-        text: "",
-        steps: [],
-        speaks: []
-      },
-      log: [response],
-      stateAfter: await fetchGameState(sessionId, signal),
-      end: {}
-    }
-    
-    ApiLogger.log("submitTurn", "POST", { sessionId, payload, signal: !!signal }, result)
-    return result
-  } catch (error) {
-    ApiLogger.log("submitTurn", "POST", { sessionId, payload, signal: !!signal }, null, error)
-    throw error
+): Promise<TurnResolution> {
+  if (!sessionId) {
+    throw new ApiError("Missing session id", 400)
   }
+
+  await attachSession(sessionId, signal)
+
+  const words = normalizeWords(payload.words ?? [])
+  if (!words.length) {
+    throw new ApiError("No words selected", 400)
+  }
+  const meta = getSessionMeta(sessionId)
+  const previousBackendState = await getSessionState(signal)
+
+  const command: Command = {
+    action1: words[0] ?? "WAAGH",
+    action2: words[1] ?? "SMASH",
+    action3: words[2] ?? "DAKKA",
+    player: meta?.playerName ?? "Warboss",
+    enemy: meta?.enemyName ?? "Human",
+  }
+
+  const responseText = await submitCommand(command, signal)
+  const updatedBackendState = await waitForStateChange(
+    previousBackendState.actions.length,
+    signal,
+  )
+
+  const nextWords = payload.allowEnemySpeak === false ? words : await safeGetNewWords(signal)
+  const enemyActions = updatedBackendState.actions.slice(previousBackendState.actions.length)
+  const enemyWords = payload.allowEnemySpeak === false ? [] : actionsToWords(enemyActions)
+
+  const previousState = adaptBackendSession({
+    sessionId,
+    backend: previousBackendState,
+    playerName: meta?.playerName,
+    archetypeId: meta?.archetypeId,
+    playerWords: meta?.words,
+  })
+
+  const stateAfter = adaptBackendSession({
+    sessionId,
+    backend: updatedBackendState,
+    playerName: previousState.player.name,
+    archetypeId: previousState.player.id,
+    playerWords: nextWords.length ? nextWords : previousState.player.words,
+    enemyWords,
+    previousState,
+  })
+
+  persistSessionMeta({
+    sessionId,
+    playerName: stateAfter.player.name,
+    archetypeId: stateAfter.player.id,
+    words: stateAfter.player.words,
+    enemyName: stateAfter.enemy.name,
+  })
+
+  const resolution = buildTurnResolution({
+    sessionId,
+    responseText,
+    usedWords: words,
+    previousBackend: previousBackendState,
+    updatedBackend: updatedBackendState,
+    stateAfter,
+    enemyWords,
+  })
+
+  ApiLogger.log("submitTurn", "POST", { sessionId, payload }, resolution)
+  return resolution
 }
 
 export async function fetchRewards(
   sessionId: string,
   signal?: AbortSignal,
-): Promise<any[]> {
-  // Return empty rewards for now
+): Promise<BuffChoice[]> {
+  void signal
+  void sessionId
   return []
 }
 
 export async function pickReward(
   sessionId: string,
-  payload: any,
+  payload: PickBuffRequest,
   signal?: AbortSignal,
-): Promise<any> {
-  // Just return current state
+): Promise<GameState> {
+  void payload
   return fetchGameState(sessionId, signal)
 }
 
-export async function endGame(
-  sessionId: string,
-  signal?: AbortSignal,
-): Promise<any> {
-  return {
-    finalScore: 100,
-    wavesCleared: 1,
-    seed: 12345
+export async function endGame(sessionId: string, signal?: AbortSignal) {
+  const state = await fetchGameState(sessionId, signal)
+  const result = {
+    finalScore: state.score,
+    wavesCleared: state.wave,
+    seed: state.seed,
   }
+  ApiLogger.log("endGame", "POST", { sessionId }, result)
+  return result
 }
+
+export { ApiLogger }

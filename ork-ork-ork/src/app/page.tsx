@@ -1,5 +1,6 @@
 'use client'
 
+import Image from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2, RotateCcw, Skull, Swords } from "lucide-react"
@@ -69,6 +70,7 @@ export default function StartPage() {
   const [loadingArchetypes, setLoadingArchetypes] = useState(false)
   const [fetchError, setFetchError] = useState<string>()
   const [isStarting, setIsStarting] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -109,6 +111,10 @@ export default function StartPage() {
     () => archetypes.find((item) => item.id === selectedArchetype) ?? archetypes[0],
     [archetypes, selectedArchetype],
   )
+
+  useEffect(() => {
+    setAvatarError(false)
+  }, [activeArchetype?.id])
 
   const hasActiveRun = Boolean(store.state?.sessionId && store.state.phase !== "gameover")
   const isBusy = store.isLoading || isStarting
@@ -319,23 +325,22 @@ export default function StartPage() {
               {/* Avatar Display */}
               <div className="flex justify-center">
                 <div className="relative">
-                  <div className="size-48 rounded-xl border-4 border-primary/30 bg-gradient-to-br from-muted/50 to-muted/20 p-4">
-                    {activeArchetype ? (
-                      <img 
+                  <div className="relative size-48 overflow-hidden rounded-xl border-4 border-primary/30 bg-gradient-to-br from-muted/50 to-muted/20">
+                    {activeArchetype && !avatarError ? (
+                      <Image
                         src={`/ork-avatar-${activeArchetype.id}.png`}
                         alt={`${activeArchetype.name} avatar`}
-                        className="h-full w-full rounded-lg object-cover"
-                        onError={(e) => {
-                          // Fallback to placeholder if image fails to load
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          target.nextElementSibling?.classList.remove('hidden')
-                        }}
+                        fill
+                        sizes="12rem"
+                        className="rounded-lg object-cover"
+                        onError={() => setAvatarError(true)}
+                        priority
                       />
-                    ) : null}
-                    <div className={`flex h-full w-full items-center justify-center rounded-lg bg-primary/10 ${activeArchetype ? 'hidden' : ''}`}>
-                      <Skull className="size-16 text-primary/60" />
-                    </div>
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center rounded-lg bg-primary/10">
+                        <Skull className="size-16 text-primary/60" />
+                      </div>
+                    )}
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-full border-2 border-background bg-primary px-3 py-1">
                     <span className="text-xs font-bold text-primary-foreground">LVL 1</span>
