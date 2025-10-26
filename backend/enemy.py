@@ -7,8 +7,7 @@ except ImportError:
 
 
 class Enemy(BaseModel):
-    def __init__(self, role: str) -> None:
-        self.role = role
+    role: str
 
     async def next_action(self, chat: Chat) -> tuple[str, str, str]:
         words = await chat.get_new_words()

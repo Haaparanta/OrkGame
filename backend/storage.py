@@ -61,7 +61,7 @@ class GameSession(BaseModel):
             enemyarmor=1,
             gameover=False,
             kills=0,
-            current_enemy=Enemy("Loota"),
+            current_enemy=Enemy(role="Loota"),
         )
 
     def act(self, action: str, player_turn: bool):
