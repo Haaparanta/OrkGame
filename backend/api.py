@@ -38,19 +38,19 @@ ARCHETYPES = [
         "id": "warboss",
         "name": "Warboss",
         "description": "Boss of the WAAAGH! Durable leader with balanced stats.",
-        "baseStats": {"hpMax": 110, "armor": 2, "rage": 1},
+        "baseStats": {"hpMax": 350, "armor": 3, "rage": 1},
     },
     {
         "id": "rokkit-boy",
         "name": "Rokkit Boy",
         "description": "Unstable explosives expert. Low armor, high burst.",
-        "baseStats": {"hpMax": 80, "armor": 0, "rage": 0},
+        "baseStats": {"hpMax": 150, "armor": 1, "rage": 3},
     },
     {
         "id": "burna-boy",
         "name": "Burna Boy",
         "description": "Flame-loving pyromaniac. Keeps the fight hot.",
-        "baseStats": {"hpMax": 95, "armor": 1, "rage": 0},
+        "baseStats": {"hpMax": 250, "armor": 2, "rage": 2},
     },
 ]
 
@@ -348,6 +348,16 @@ def select_archetype(
 
     # Get the archetype details
     archetype = next((arch for arch in ARCHETYPES if arch["id"] == archetype_id), None)
+    
+    if archetype:
+        hpMax = archetype["baseStats"]["hpMax"]
+        armor = archetype["baseStats"]["armor"]
+        rage = archetype["baseStats"]["rage"]
+    else:
+        hpMax = 300
+        armor = 1
+        rage = 1
+    
 
     return {
         "message": "Archetype selected successfully",
