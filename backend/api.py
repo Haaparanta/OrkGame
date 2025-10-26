@@ -350,14 +350,14 @@ def select_archetype(
     archetype = next((arch for arch in ARCHETYPES if arch["id"] == archetype_id), None)
     
     if archetype:
-        hpMax = archetype["baseStats"]["hpMax"]
-        armor = archetype["baseStats"]["armor"]
-        rage = archetype["baseStats"]["rage"]
+        hpMax = int(archetype["baseStats"]["hpMax"])
+        armor = int(archetype["baseStats"]["armor"])
+        rage = int(archetype["baseStats"]["rage"])
     else:
         hpMax = 300
         armor = 1
         rage = 1
-    
+    state.set_archtype(hpMax, armor, rage)
 
     return {
         "message": "Archetype selected successfully",
