@@ -75,7 +75,13 @@ class Chat:
 
     async def process_query(self, session_id: str, player_turn: bool, query: str):
         res = await self.agent.ainvoke(
-            {"session_id": session_id, "player_turn": player_turn, "messages": query}
+            {
+                "input": {
+                    "session_id": session_id,
+                    "player_turn": player_turn,
+                    "messages": query,
+                }
+            }
         )
         logger.info("done")
         for key in res.keys():
