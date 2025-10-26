@@ -38,7 +38,10 @@ class Chat:
         Every turn, you receive:
         1. session_id — always pass this as the first argument to any MCP tool you invoke
         2. player_turn — always pass this as the second argument to any MCP tool you invoke
-        3. messages — Ork words to interpret
+        3. messages — That are:
+            1. Ork words to interpret
+            2. The one doing the action
+            3. The opponent
 
         Example tool call:
         shoot_rocket(session_id=session_id, player_turn=player_turn)
@@ -79,11 +82,9 @@ class Chat:
     async def process_query(self, session_id: str, player_turn: bool, query: str):
         res = await self.agent.ainvoke(
             {
-                "input": {
-                    "session_id": session_id,
-                    "player_turn": player_turn,
-                    "messages": query,
-                }
+                "session_id: "+ session_id+
+                "player_turn: "+ player_turn+
+                "messages: "+ query
             }
         )
         logger.info("done")
