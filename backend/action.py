@@ -47,6 +47,8 @@ class ActionEnum(enum.StrEnum):
     charge = "charge"
     throw_granade = "throw_granade"
     fire_flamethrower = "fire_flamethrower"
+    armor_up = "armor_up"
+    omniboost = "omniboost"
 
     def effect(self) -> Effect:
         effect = Effect()
@@ -83,4 +85,11 @@ class ActionEnum(enum.StrEnum):
                 else:
                     effect.self_damage = 100
                     effect.loose_damage_boost = fail_dmg_boost_loss()
+            case ActionEnum.armor_up:
+                effect.gain_armor = 1
+            case ActionEnum.omniboost:
+                effect.gain_armor = 1
+                effect.gain_damage_boost = 1
+                effect.self_heal = 50
+            
         return effect

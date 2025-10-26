@@ -58,7 +58,17 @@ def fire_flamethrower(session_id: str, player_turn: bool):
     send_ipc_message(session_id, ActionEnum.fire_flamethrower, player_turn)
     return
 
+mcp.tool()
+def armor_up(session_id: str, player_turn: bool):
+    """Reinforce your armor and prepare for booms"""
+    logging.info("Armor up")
+    send_ipc_message(session_id, ActionEnum.armor_up, player_turn)
 
+mcp.tool()
+def omniboost(session_id: str, player_turn: bool):
+    """Your roar bellows over the battlefield, perform when all commands point to Waarghing"""
+    logging.info("Omniboosting")
+    
 if __name__ == "__main__":
     print("Starting server...")
     # Initialize and run the server

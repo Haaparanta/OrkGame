@@ -4,6 +4,7 @@ import os
 from fastapi import Cookie, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
+import math
 
 
 try:
@@ -68,13 +69,15 @@ class GameSession(BaseModel):
         effect = action.effect()
         logger.info("Got effect: %s", effect)
         if (self.currenthealth + effect.self_heal) > (
-            effect.self_damage * (1 / self.armor) * self.enemyrage / 1
+            effect.self_damage * (1 / self.armor) * self.enemyrage
         ):
-            self.currenthealth = (
+            self.currenthealth = math.ceil(
                 self.currenthealth
                 + effect.self_heal
-                - int(effect.self_damage * (1 / self.armor) * self.enemyrage / 1)
+                - (effect.self_damage * (1 / self.armor) * self.enemyrage)
             )
+            if self.currenthealth > self.maxhealth:
+                self.currenthealth = self.maxhealth
         else:
             self.currenthealth = 0
             self.gameover = True
@@ -90,13 +93,15 @@ class GameSession(BaseModel):
             self.rage = 1
 
         if (self.enemycurrenthealth + effect.enemy_heal) > (
-            (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage / 1
+            (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
         ):
-            self.enemycurrenthealth = int(
+            self.enemycurrenthealth = math.ceil(
                 self.enemycurrenthealth
                 + effect.enemy_heal
-                - (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage / 1
+                - (effect.enemy_damage * (1 / self.enemyarmor)) * self.rage
             )
+            if self.enemycurrenthealth > self.enemymaxhealth:
+                self.enemycurrenthealth = self.enemymaxhealth
         else:
             self.kills += 1
             self.enemycurrenthealth = 100 + (50 * self.kills)
