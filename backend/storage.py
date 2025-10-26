@@ -116,7 +116,7 @@ class GameSession(BaseModel):
             else:
                 self.kills += 1
                 self.enemycurrenthealth = 100 + (50 * self.kills)
-                self.enemymax = 100 + (50 * self.kills)
+                self.enemymaxhealth = 100 + (50 * self.kills)
                 self.enemyrage = 1 + self.kills // 2
                 self.enemyarmor = 1 + self.kills // 2
                 self.maxhealth += 20
