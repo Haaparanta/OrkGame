@@ -60,12 +60,12 @@ class Chat:
         await self.session.initialize()
         tools = await load_mcp_tools(self.session)
         agent = create_agent(
-            model="openai:gpt-5-nano-2025-08-07",
+            model="openai:gpt-4.1-mini",
             tools=tools,
             system_prompt=self.system_prompt,
         )
         self.agent = agent
-        self.voice_line_agent = create_agent(model="openai:gpt-5-nano-2025-08-07")
+        self.voice_line_agent = create_agent(model="openai:gpt-4.1-mini")
 
         return self
 
