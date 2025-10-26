@@ -1,5 +1,9 @@
 from pydantic import BaseModel
-from .mcp_client import Chat
+
+try:
+    from .mcp_client import Chat
+except ImportError:
+    from mcp_client import Chat
 
 
 class Enemy(BaseModel):
