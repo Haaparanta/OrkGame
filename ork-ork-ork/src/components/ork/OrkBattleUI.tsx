@@ -364,8 +364,6 @@ function ActorCard({ title, combatant, alignment }: ActorCardProps) {
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           <StatBadge label="Rage" value={combatant.rage} />
-          <StatBadge label="Ammo" value={combatant.ammo} />
-          <StatBadge label="Damage" value={`${combatant.damageMod.toFixed(2)}×`} />
           <StatBadge label="Armor" value={combatant.armor} />
           <StatBadge label="Cover" value={combatant.cover ? "Yes" : "No"} />
           <StatBadge label="Words" value={combatant.words.length} />
@@ -848,8 +846,6 @@ function CharacterCard({ character, title, isPlayer, playerName }: CharacterCard
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <StatBadge label="Rage" value={character.rage} />
-          <StatBadge label="Ammo" value={character.ammo} />
-          <StatBadge label="Damage" value={`${character.damageMod.toFixed(1)}×`} />
           <StatBadge label="Armor" value={character.armor} />
         </div>
       </CardContent>

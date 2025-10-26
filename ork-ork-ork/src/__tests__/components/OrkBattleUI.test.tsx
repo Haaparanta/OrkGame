@@ -33,9 +33,7 @@ const mockGameState: GameState = {
     hp: 85,
     hpMax: 100,
     rage: 15,
-    ammo: 8,
     cover: false,
-    damageMod: 5,
     armor: 3,
     distance: 'medium',
     words: ['WAAGH', 'KRUMP', 'DAKKA', 'CHOPPA', 'BOOM'],
@@ -48,9 +46,7 @@ const mockGameState: GameState = {
     hp: 60,
     hpMax: 80,
     rage: 0,
-    ammo: 10,
     cover: true,
-    damageMod: 0,
     armor: 2,
     distance: 'medium',
     words: [],
@@ -143,7 +139,6 @@ describe('OrkBattleUI Component', () => {
 
       expect(screen.getByText('15')).toBeInTheDocument() // Rage
       expect(screen.getByText('3')).toBeInTheDocument() // Armor
-      expect(screen.getByText('8')).toBeInTheDocument() // Ammo
     })
 
     test('should render available words', () => {

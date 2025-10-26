@@ -34,9 +34,7 @@ export interface Combatant {
   hp: number
   hpMax: number
   rage: number
-  ammo: number
   cover: boolean
-  damageMod: number
   armor: number
   distance: Distance
   words: string[]

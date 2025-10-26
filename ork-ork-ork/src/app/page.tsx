@@ -27,9 +27,7 @@ import {
 
 const STAT_LABELS: Record<string, string> = {
   hpMax: "HP",
-  damageMod: "Damage",
   armor: "Armor",
-  ammo: "Ammo",
   rage: "Rage",
 }
 
@@ -38,21 +36,21 @@ const FALLBACK_ARCHETYPES: Archetype[] = [
     id: "warboss",
     name: "Warboss",
     description: "Big boss with the loudest WAAGH. Heavy armor, steady dakka.",
-    baseStats: { hpMax: 110, damageMod: 1, armor: 2, ammo: 2, rage: 1 },
+    baseStats: { hpMax: 110, armor: 2, rage: 1 },
     startingWords: ["WAAGH", "SMASH", "COVER"],
   },
   {
     id: "rokkit-boy",
     name: "Rokkit Boy",
     description: "Low HP, high boom. Shoots first, asks never.",
-    baseStats: { hpMax: 80, damageMod: 1.3, armor: 0, ammo: 3, rage: 0 },
+    baseStats: { hpMax: 80, armor: 0, rage: 0 },
     startingWords: ["SHOOT", "BOOM", "COVER"],
   },
   {
     id: "burna-boy",
     name: "Burna Boy",
     description: "Fire solves most problems. Keeps zones molten.",
-    baseStats: { hpMax: 95, damageMod: 0.95, armor: 1, ammo: 2, rage: 0 },
+    baseStats: { hpMax: 95, armor: 1, rage: 0 },
     startingWords: ["BURN", "CHARGE", "FIXIT"],
   },
 ]
@@ -361,7 +359,7 @@ export default function StartPage() {
                 <div className="grid grid-cols-5 gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
                   {Object.entries(STAT_LABELS).map(([key, label]) => {
                     const value = activeArchetype.baseStats?.[key] ?? 0
-                    const formatted = key === "damageMod" ? `${value.toFixed(1)}×` : Math.round(value).toString()
+                    const formatted = Math.round(value).toString()
                     return (
                       <div key={key} className="text-center">
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
