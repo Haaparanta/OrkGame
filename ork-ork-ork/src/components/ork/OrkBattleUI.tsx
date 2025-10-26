@@ -834,6 +834,7 @@ function CharacterCard({ character, title, isPlayer, playerName }: CharacterCard
                   fill
                   sizes="6rem"
                   className="object-cover"
+                  unoptimized
                   onError={() => setImageError(true)}
                 />
               ) : (
