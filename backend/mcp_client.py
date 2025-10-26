@@ -78,6 +78,7 @@ class Chat:
         await self.client.__aexit__(exc_type, exc, tb)
 
     async def process_query(self, session_id: str, player_turn: bool, query: str):
+        print("Session id:", session_id)
         res = await self.agent.ainvoke(
             {
                 "session_id ": session_id,
