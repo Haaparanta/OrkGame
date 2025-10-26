@@ -1,6 +1,5 @@
 import logging
-from mcp import ClientSession, stdio_client
-from mcp import SocketServerParameters
+from mcp import ClientSession, stdio_client, StdioServerParameters
 from pydantic import BaseModel
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -46,9 +45,9 @@ class Chat:
         commands for offensive or defensive maneuvers in battle. Each word should feel natural in Ork speech (loud, crude, or silly). Do not include any explanations, 
         descriptions, numbering, or punctuation—output only the 8 words separated by spaces."""
 
-        self.server_params = SocketServerParameters(host="localhost", port=8000)(
+        self.server_params = StdioServerParameters(
             command="python",
-            args=["-u", "backend/mcp_server.py"],
+            args=["backend/mcp_server.py"],
         )
 
     async def __aenter__(self):
@@ -88,7 +87,7 @@ class Chat:
     async def get_new_words(self):
         """
         Generate new Ork battle words using the AI model.
-        
+
         Returns:
             str: Space-separated string of exactly 8 Orkish battle words plus "NO" (9 total), or None if generation fails
         """
